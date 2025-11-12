@@ -601,10 +601,7 @@ pub fn lctToUT(date: AstroDate) AstroDate {
     var m: Month = date.month;
     var d: Day = date.day;
     const lct_dec = hmsToDec(date.hour, date.min, date.sec);
-    var ut_dec = lct_dec - date.tz.getOffsetHours();
-    if (date.tz.dst) {
-        ut_dec -= 1; // Subtract 1 hour for DST
-    }
+    var ut_dec = lct_dec - date.tz.getOffsetHours(); // Takes care of DST as well
     if (ut_dec < 0) {
         y, m, d = previousDay(y, m, d);
         ut_dec += 24; // Ensure UT is positive
