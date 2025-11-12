@@ -2,15 +2,25 @@
 
 const std = @import("std");
 const ad = @import("astrodate.zig");
+const ang = @import("angle.zig");
+const crd = @import("coords.zig");
 const AstroDate = ad.AstroDate;
 const TimeZone = ad.TimeZone;
 const UnixTime = ad.UnixTime;
 const Year = ad.Year;
 const Month = ad.Month;
 const Day = ad.Day;
+const Angle = ang.Angle;
+const DMS = ang.DMS;
+const HMS = ang.HMS;
+const CoordError = crd.CoordError;
+const GeoCoord = crd.GeoCoord;
+const RaDec = crd.RaDec;
+const HorCoord = crd.HorCoord;
 const Allocator = std.mem.Allocator;
 
 const expect = std.testing.expect;
+const allocator = std.testing.allocator;
 const print = std.debug.print;
 
 // Chapter 3 - Time Conversions
@@ -106,4 +116,97 @@ test "Chapter 3" {
     date = ad.utToLCT(ut_date, tz);
     try expect(date.year == 2000 and date.month == 7 and date.day == 5 and
                date.hour == 12 and date.min == 0 and date.sec == 0);
+}
+
+// Chapter 5 - Stars in the Nighttime sky
+test "Chapter 5" {
+    // 1. An observer is located at latitude 45° N, logitude 100° W in the Pacific
+    // Standard Time zone. Assuming the LCT is 09:00:00 on December 1, 2015 and
+    // the observer is not on daylight saving time, calculate the horizon coordinates
+    // for a star at right ascencion 06:00:00, declination -60°00'00".
+    //
+    // h = -59°41'58", A = 224°15'27".
+    var loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=45,.min=0,.sec=0}),
+                                      Angle.fromDMS(DMS{.sign='-',.deg=100,.min=0,.sec=0}));
+    var date = AstroDate{.year=2015, .month=12, .day=1, .hour=9, .min=0, .sec=0, .tz=ad.tzPST};
+    var date_lst = ad.lctToLST(date, loc.lon);
+    var lst = Angle.fromHours(ad.hmsToDec(date_lst.hour,date_lst.min, date_lst.sec));
+
+    var obj_equ = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=6,.min=0,.sec=0}),
+                                   Angle.fromDMS(DMS{.sign='-',.deg=60,.min=0,.sec=0}));
+
+    var obj_hor = obj_equ.toHor(loc.lat, lst);
+
+    const alt_str = obj_hor.alt.toDMSString(allocator) catch unreachable;
+    const az_str = obj_hor.az.toDMSString(allocator) catch unreachable;
+    // print("h={s}, A={s}\n", .{alt_str, az_str});
+
+    try expect(std.mem.eql(u8, alt_str, "-59°41'57\""));
+    try expect(std.mem.eql(u8, az_str, "224°15'27\""));
+
+    allocator.free(alt_str);
+    allocator.free(az_str);
+
+    // 2. An observer is located at latitude 38.25° N, longitude 78.3° W in the Eastern
+    // Standard Time zone. At 21:00:00 LCT on June 6, 2015, the observer located
+    // an object at altitude 45°00'00", azimuth 90°00'00". Assuming this is daylight
+    // saving time, what are the objects equatorial coordinates?
+    //
+    //   ra = 16h14m42s, dec=25°57'41"
+    loc = GeoCoord.init(Angle.fromDegrees(38.25), Angle.fromDegrees(-78.3));
+    date = AstroDate{.year=2015, .month=6, .day=6, .hour=21, .min=0, .sec=0, .tz=ad.tzEDT};
+    date_lst = ad.lctToLST(date, loc.lon);
+    lst = Angle.fromHours(ad.hmsToDec(date_lst.hour,date_lst.min, date_lst.sec));
+
+    obj_hor = HorCoord.init(Angle.fromDegrees(90), Angle.fromDegrees(45));
+    obj_equ = obj_hor.toRaDec(loc.lat, lst);
+
+    const ra_str = try obj_equ.ra.toHMSString(allocator);
+    const dec_str = try obj_equ.dec.toDMSString(allocator);
+    // print("ra = {s}, dec = {s}\n", .{ra_str, dec_str});
+
+    try expect(std.mem.eql(u8, ra_str, "16ʰ14ᵐ42ˢ"));
+    try expect(std.mem.eql(u8, dec_str, "25°57'41\""));
+
+    allocator.free(ra_str);
+    allocator.free(dec_str);
+
+    // 3. What are the rising and setting times for the star from problem number 1?
+    //
+    // Star doesn't rise or set for the observer
+    loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=45,.min=0,.sec=0}),
+                                      Angle.fromDMS(DMS{.sign='-',.deg=100,.min=0,.sec=0}));
+    date = AstroDate{.year=2015, .month=12, .day=1, .hour=9, .min=0, .sec=0, .tz=ad.tzPST};
+    obj_equ = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=6,.min=0,.sec=0}),
+                                   Angle.fromDMS(DMS{.sign='-',.deg=60,.min=0,.sec=0}));
+   
+    _ = crd.riseAndSet(loc, date, obj_equ) catch |err| {
+        try expect(err == CoordError.ObjNeverRises);
+        // print("Error: {}", .{err});
+   };
+
+    // 4. What are the rising and setting times for the star from problem number 2?
+    //
+    // LCTr = 16ʰ57ᵐ49ˢ,  LCTs = 7ʰ59ᵐ51ˢ 
+    loc = GeoCoord.init(Angle.fromDegrees(38.25), Angle.fromDegrees(-78.3));
+    date = AstroDate{.year=2015, .month=6, .day=6, .hour=21, .min=0, .sec=0, .tz=ad.tzEDT};
+    obj_equ = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=16,.min=14,.sec=42}),
+                                   Angle.fromDMS(DMS{.sign='+',.deg=25,.min=57,.sec=41}));
+
+    const ras = crd.riseAndSet(loc, date, obj_equ) catch |err| {
+        print("Error: {}", .{err});
+        return err;
+    };
+
+    const rise_str = try ras.rise_time.toTimeString(allocator);
+    const set_str = try ras.set_time.toTimeString(allocator);
+
+    // print("LCTr = {s}\n", .{rise_str});
+    // print("LCTs = {s}\n", .{set_str});
+
+    try expect(std.mem.eql(u8, rise_str, "16:57:49"));
+    try expect(std.mem.eql(u8, set_str,  "07:59:51"));
+
+    allocator.free(rise_str);
+    allocator.free(set_str);
 }
