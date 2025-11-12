@@ -151,11 +151,11 @@ pub const HorCoord = struct {
 
     /// Convert horizontal coordinates to equatorial coordinates in RA/Dec system.
     pub fn toRaDec(self: HorCoord, lat: Latitude, lst: Angle) RaDec {
-        const ha_equa = self.toHaDec(lat);
-        const ra = Angle.fromHours(@mod(lst.toHours().hrs - ha_equa.ha.toHours().hrs, 24.0));
+        const hadec = self.toHaDec(lat);
+        const ra = Angle.fromHours(@mod(lst.toHours().hrs - hadec.ha.toHours().hrs, 24.0));
         return RaDec.init(
             ra,
-            ha_equa.dec
+            hadec.dec
         );
     }
 
@@ -466,7 +466,7 @@ pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
 
 const expect = std.testing.expect;
 
-test "GeoCoord distance" {
+test "GeoCoord.distance" {
     const coord1 = GeoCoord.init(Angle.fromDegrees(52.5200), Angle.fromDegrees(13.4050)); // Berlin
     const coord2 = GeoCoord.init(Angle.fromDegrees(48.8566), Angle.fromDegrees(2.3522));  // Paris
 
@@ -475,7 +475,7 @@ test "GeoCoord distance" {
     try expect(std.math.approxEqAbs(f64, distance, 878_000.0, 1_000.0)); // ~878 km
 }
 
-test "GeoCoord toString" {
+test "GeoCoord.toString" {
     const coord = GeoCoord.init(Angle.fromDegrees(51.5074), Angle.fromDegrees(-0.1278)); // London
     const allocator = std.testing.allocator;
     const coord_str = try coord.toString(allocator);
@@ -485,7 +485,7 @@ test "GeoCoord toString" {
     allocator.free(coord_str);
 }
 
-test "HorCoord toHaDec" {
+test "HorCoord.toHaDec" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -504,7 +504,7 @@ test "HorCoord toHaDec" {
     allocator.free(dec_str);
 }
 
-test "HaDec toHor" {
+test "HaDec.toHor" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -525,7 +525,7 @@ test "HaDec toHor" {
     allocator.free(alt_str);
 }
 
-test "RaDec toHor" {
+test "RaDec.toHor" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -553,7 +553,7 @@ test "RaDec toHor" {
     allocator.free(alt_str);
 }
 
-test "RaDec toEcliptic" {
+test "RaDec.toEcliptic" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -574,7 +574,7 @@ test "RaDec toEcliptic" {
     allocator.free(lon_str);
 }
 
-test "RaDec toGalactic" {
+test "RaDec.toGalactic" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -596,7 +596,7 @@ test "RaDec toGalactic" {
     allocator.free(lon_str);
 }
 
-test "RaDec adjustPrecession" {
+test "RaDec.adjustPrecession" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -618,7 +618,7 @@ test "RaDec adjustPrecession" {
     allocator.free(dec_str);
 }
 
-test "EclipticCoord toRaDec" {
+test "EclipticCoord.toRaDec" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -640,7 +640,7 @@ test "EclipticCoord toRaDec" {
     allocator.free(dec_str);
 }
 
-test "GalacticCoord toRaDec" {
+test "GalacticCoord.toRaDec" {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
