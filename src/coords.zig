@@ -452,8 +452,8 @@ pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
     }
     const set_lst = AstroDate.fromDateAndHours(date.year, date.month, date.day, set_hrs, tz);
     var set_time  = ad.lstToLCT(set_lst, loc.lon, date.tz);
-    if (set_hrs < rise_hrs) {
-        set_time = set_time.adNextDay();
+    if (set_time.toHours() < rise_time.toHours()) {
+        set_time = set_time.adNextDay();        
     }
 
     return RiseAndSet{

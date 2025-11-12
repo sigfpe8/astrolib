@@ -33,6 +33,8 @@ pub const tzPDT = TimeZone.init(true, -8, 0);  // Pacific Daylight Time (UTC-7)
 // Conversion factors
 const hrs_to_min = ang.hrs_to_min;
 const min_to_sec = ang.min_to_sec;
+const min_to_hrs = ang.min_to_hrs;
+const sec_to_hrs = ang.sec_to_hrs;
 
 pub const TimeZone = packed struct(u8) {
     dst: bool = false, // Daylight Saving Time (DST) flag
@@ -88,13 +90,11 @@ pub const AstroDate = struct {
     tz:    TimeZone = .{},  // Encoded timezone, defaults to UTC
 
     pub fn fromDateAndHours(year: Year, month: Month, day: Day, hours: f64, tz: TimeZone) AstroDate {
-        const hf = hours;
-
         std.debug.assert(hours >= 0 and hours < 24);
 
-        const hour = @trunc(hf);
-        const min = @trunc((hf - hour) * hrs_to_min);
-        const sec = @round(((hf - hour) * hrs_to_min - min) * min_to_sec);
+        const hour = @trunc(hours);
+        const min = @trunc((hours - hour) * hrs_to_min);
+        const sec = @round(((hours - hour) * hrs_to_min - min) * min_to_sec);
         var hi: u8 = @intFromFloat(hour);
         var mi: u8 =  @intFromFloat(min);
         var si: u8 = @intFromFloat(sec);
@@ -116,6 +116,14 @@ pub const AstroDate = struct {
             .sec = si,
             .tz = tz
         };
+    }
+
+    /// Discard date and return time as decimal hours
+    pub fn toHours(self: Self) f64 {
+        const hours: f64 = @as(f64,@floatFromInt(self.hour)) +
+                           @as(f64,@floatFromInt(self.min)) * min_to_hrs +
+                           @as(f64,@floatFromInt(self.sec)) * sec_to_hrs;
+        return hours;
     }
 
     // The day following
