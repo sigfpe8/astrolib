@@ -77,4 +77,48 @@ pub fn build(b: *std.Build) void {
     // This will evaluate the `run` step rather than the default, which is "install".
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    // Create test modules for the test files
+    const astrodate_tests_mod = b.createModule(.{
+        .root_source_file = b.path("src/astrodate-tests.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "astrolib", .module = lib_mod },
+        },
+    });
+
+    const lawrence_tests_mod = b.createModule(.{
+        .root_source_file = b.path("src/lawrence-tests.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "astrolib", .module = lib_mod },
+        },
+    });
+
+    // Create test executables
+    const astrodate_test_exe = b.addTest(.{
+        .root_module = astrodate_tests_mod,
+    });
+
+    const lawrence_test_exe = b.addTest(.{
+        .root_module = lawrence_tests_mod,
+    });
+
+    // Create run steps for individual tests
+    const run_astrodate_test = b.addRunArtifact(astrodate_test_exe);
+    const run_lawrence_test = b.addRunArtifact(lawrence_test_exe);
+
+    // Create individual test steps
+    const test_astrodate_step = b.step("test-astrodate", "Run astrodate tests");
+    test_astrodate_step.dependOn(&run_astrodate_test.step);
+
+    const test_lawrence_step = b.step("test-lawrence", "Run lawrence tests");
+    test_lawrence_step.dependOn(&run_lawrence_test.step);
+
+    // Create a combined test step
+    const test_step = b.step("test", "Run all tests");
+    test_step.dependOn(&run_astrodate_test.step);
+    test_step.dependOn(&run_lawrence_test.step);
 }

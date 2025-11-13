@@ -1,11 +1,12 @@
 const std = @import("std");
-const ad = @import("astrodate.zig");
-const AstroDate = ad.AstroDate;
-const TimeZone = ad.TimeZone;
-const UnixTime = ad.UnixTime;
-const Year = ad.Year;
-const Month = ad.Month;
-const Day = ad.Day;
+// const ast = @import("astrodate.zig");
+const ast = @import("astrolib").ast;
+const AstroDate = ast.AstroDate;
+const TimeZone = ast.TimeZone;
+const UnixTime = ast.UnixTime;
+const Year = ast.Year;
+const Month = ast.Month;
+const Day = ast.Day;
 const Allocator = std.mem.Allocator;
 
 const expect = std.testing.expect;
@@ -23,18 +24,18 @@ test "dayOfWeek" {
 }
 
 test "isLeapYear" {
-    try expect(ad.isLeapYear(0) == true);
-    try expect(ad.isLeapYear(4) == true);
-    try expect(ad.isLeapYear(10) == false);
-    try expect(ad.isLeapYear(1500) == true);
-    try expect(ad.isLeapYear(1600) == true);
-    try expect(ad.isLeapYear(1700) == false);
-    try expect(ad.isLeapYear(1895) == false);
-    try expect(ad.isLeapYear(1900) == false);
-    try expect(ad.isLeapYear(2000) == true);
-    try expect(ad.isLeapYear(2020) == true);
-    try expect(ad.isLeapYear(2021) == false);
-    try expect(ad.isLeapYear(2024) == true);
+    try expect(ast.isLeapYear(0) == true);
+    try expect(ast.isLeapYear(4) == true);
+    try expect(ast.isLeapYear(10) == false);
+    try expect(ast.isLeapYear(1500) == true);
+    try expect(ast.isLeapYear(1600) == true);
+    try expect(ast.isLeapYear(1700) == false);
+    try expect(ast.isLeapYear(1895) == false);
+    try expect(ast.isLeapYear(1900) == false);
+    try expect(ast.isLeapYear(2000) == true);
+    try expect(ast.isLeapYear(2020) == true);
+    try expect(ast.isLeapYear(2021) == false);
+    try expect(ast.isLeapYear(2024) == true);
 }
 
 test "toDateString" {
@@ -71,40 +72,40 @@ test "toDateTimeString" {
 }
 
 test "easterDate" {
-    var date = ad.easterDate(1818);
+    var date = ast.easterDate(1818);
     try expect(date.year == 1818 and date.month == 3 and date.day == 22);
 
-    date = ad.easterDate(1886);    
+    date = ast.easterDate(1886);    
     try expect(date.year == 1886 and date.month == 4 and date.day == 25);    
 
-    date = ad.easterDate(1954);
+    date = ast.easterDate(1954);
     try expect(date.year == 1954 and date.month == 4 and date.day == 18);
     
-    date = ad.easterDate(1961);
+    date = ast.easterDate(1961);
     try expect(date.year == 1961 and date.month == 4 and date.day == 2);
 
-    date = ad.easterDate(1991);
+    date = ast.easterDate(1991);
     try expect(date.year == 1991 and date.month == 3 and date.day == 31);
 
-    date = ad.easterDate(1992);
+    date = ast.easterDate(1992);
     try expect(date.year == 1992 and date.month == 4 and date.day == 19);
 
-    date = ad.easterDate(1993);
+    date = ast.easterDate(1993);
     try expect(date.year == 1993 and date.month == 4 and date.day == 11);
 
-    date = ad.easterDate(2000);
+    date = ast.easterDate(2000);
     try expect(date.year == 2000 and date.month == 4 and date.day == 23);
 
-    date = ad.easterDate(2025);
+    date = ast.easterDate(2025);
     try expect(date.year == 2025 and date.month == 4 and date.day == 20);
 
-    date = ad.easterDate(2026);
+    date = ast.easterDate(2026);
     try expect(date.year == 2026 and date.month == 4 and date.day == 5);
 
-    date = ad.easterDate(2038);
+    date = ast.easterDate(2038);
     try expect(date.year == 2038 and date.month == 4 and date.day == 25);
 
-    date = ad.easterDate(2285);
+    date = ast.easterDate(2285);
     try expect(date.year == 2285 and date.month == 3 and date.day == 22);
 }
 
@@ -161,13 +162,13 @@ test "toUnixTime" {
 }
 
 test "daysBetweenDates" {
-    try expect(ad.daysBetweenDates(.{ .year=1970, .month= 1, .day= 1 }, .{ .year=1970, .month= 1, .day= 2 }) == 1);
-    try expect(ad.daysBetweenDates(.{ .year=1970, .month= 1, .day= 1 }, .{ .year=1970, .month= 1, .day=31 }) == 30);
-    try expect(ad.daysBetweenDates(.{ .year=1970, .month= 1, .day= 1 }, .{ .year=1970, .month=12, .day=31 }) == 364);
-    try expect(ad.daysBetweenDates(.{ .year=1972, .month= 2, .day=29 }, .{ .year=1972, .month= 3, .day= 1 }) == 1);
-    try expect(ad.daysBetweenDates(.{ .year=2022, .month=12, .day=31 }, .{ .year=2023, .month=12, .day=31 }) == 365);
-    try expect(ad.daysBetweenDates(.{ .year=1910, .month=4,  .day=20 }, .{ .year=1986, .month=2, .day=9}) == 27689);
-    try expect(ad.daysBetweenDates(.{ .year=1991, .month=7,  .day=11 }, .{ .year=2018, .month=11, .day=26}) == 10000);
+    try expect(ast.daysBetweenDates(.{ .year=1970, .month= 1, .day= 1 }, .{ .year=1970, .month= 1, .day= 2 }) == 1);
+    try expect(ast.daysBetweenDates(.{ .year=1970, .month= 1, .day= 1 }, .{ .year=1970, .month= 1, .day=31 }) == 30);
+    try expect(ast.daysBetweenDates(.{ .year=1970, .month= 1, .day= 1 }, .{ .year=1970, .month=12, .day=31 }) == 364);
+    try expect(ast.daysBetweenDates(.{ .year=1972, .month= 2, .day=29 }, .{ .year=1972, .month= 3, .day= 1 }) == 1);
+    try expect(ast.daysBetweenDates(.{ .year=2022, .month=12, .day=31 }, .{ .year=2023, .month=12, .day=31 }) == 365);
+    try expect(ast.daysBetweenDates(.{ .year=1910, .month=4,  .day=20 }, .{ .year=1986, .month=2, .day=9}) == 27689);
+    try expect(ast.daysBetweenDates(.{ .year=1991, .month=7,  .day=11 }, .{ .year=2018, .month=11, .day=26}) == 10000);
 }
 
 test "hmsToDec" {
@@ -177,8 +178,8 @@ test "hmsToDec" {
         while (m < 60) : (m += 1) {
             var s: u8 = 0;
             while (s < 60) : (s += 1) {
-                const dec = ad.hmsToDec(h, m, s);
-                const date = ad.decToHMS(dec);
+                const dec = ast.hmsToDec(h, m, s);
+                const date = ast.decToHMS(dec);
                 try expect(date.hour == h and
                            date.min == m and
                            date.sec == s);
@@ -190,28 +191,28 @@ test "hmsToDec" {
 test "utToGST" {
     // [Lawrence, 2018] p 47-48
     const utDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=23, .min=30, .sec=0 };
-    const gstDate = ad.utToGST(utDate);
+    const gstDate = ast.utToGST(utDate);
     try expect(gstDate.hour == 8 and gstDate.min == 41 and gstDate.sec == 53);
 }
 
 test "gstToUT" {
     // [Lawrence, 2018] p 48-49
     const gstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=8, .min=41, .sec=53 };
-    const utDate = ad.gstToUT(gstDate);
+    const utDate = ast.gstToUT(gstDate);
     try expect(utDate.hour == 23 and utDate.min == 30 and utDate.sec == 0);
 }
 
 test "gstToLST" {
     // [Lawrence, 2018] p 50
     const gstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=2, .min=3, .sec=41 };
-    const lstDate = ad.gstToLST(gstDate, -40.0); // Longitude 40° W
+    const lstDate = ast.gstToLST(gstDate, -40.0); // Longitude 40° W
     try expect(lstDate.hour == 23 and lstDate.min == 23 and lstDate.sec == 41);
 }
 
 test "lstToGST" {
     // [Lawrence, 2018] p 50
     const lstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=23, .min=23, .sec=41 };
-    const gstDate = ad.lstToGST(lstDate, 50.0); // Longitude 50° E
+    const gstDate = ast.lstToGST(lstDate, 50.0); // Longitude 50° E
     try expect(gstDate.hour == 20 and gstDate.min == 3 and gstDate.sec == 41);
 }
 
@@ -220,13 +221,13 @@ test "nextDay" {
     var m: Month = undefined;
     var d: Day = undefined;
 
-    y, m, d = ad.nextDay(2025, 10, 18);
+    y, m, d = ast.nextDay(2025, 10, 18);
     try expect(y == 2025 and m == 10 and d == 19);
 
-    y, m, d = ad.nextDay(2025, 10, 31);
+    y, m, d = ast.nextDay(2025, 10, 31);
     try expect(y == 2025 and m == 11 and d == 1);
 
-    y, m, d = ad.nextDay(2025, 12, 31);
+    y, m, d = ast.nextDay(2025, 12, 31);
     try expect(y == 2026 and m == 1 and d == 1);
 }
 
@@ -235,22 +236,22 @@ test "previousDay" {
     var m: Month = undefined;
     var d: Day = undefined;
 
-    y, m, d = ad.previousDay(2025, 10, 18);
+    y, m, d = ast.previousDay(2025, 10, 18);
     try expect(y == 2025 and m == 10 and d == 17);
 
-    y, m, d = ad.previousDay(2025, 11, 1);
+    y, m, d = ast.previousDay(2025, 11, 1);
     try expect(y == 2025 and m == 10 and d == 31);
 
-    y, m, d = ad.previousDay(2025, 10, 1);
+    y, m, d = ast.previousDay(2025, 10, 1);
     try expect(y == 2025 and m == 9 and d == 30);
 
-    y, m, d = ad.previousDay(2025, 3, 1);
+    y, m, d = ast.previousDay(2025, 3, 1);
     try expect(y == 2025 and m == 2 and d == 28);
 
-    y, m, d = ad.previousDay(2000, 3, 1);
+    y, m, d = ast.previousDay(2000, 3, 1);
     try expect(y == 2000 and m == 2 and d == 29);
 
-    y, m, d = ad.previousDay(2026, 1, 1);
+    y, m, d = ast.previousDay(2026, 1, 1);
     try expect(y == 2025 and m == 12 and d == 31);
 }
 

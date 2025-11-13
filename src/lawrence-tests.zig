@@ -1,15 +1,19 @@
 // Tests from the exercises in the book "Celestial Calculations" by J. L. Lawrence
 
 const std = @import("std");
-const ad = @import("astrodate.zig");
-const ang = @import("angle.zig");
-const crd = @import("coords.zig");
-const AstroDate = ad.AstroDate;
-const TimeZone = ad.TimeZone;
-const UnixTime = ad.UnixTime;
-const Year = ad.Year;
-const Month = ad.Month;
-const Day = ad.Day;
+// const ad = @import("astrodate.zig");
+// const ang = @import("angle.zig");
+// const crd = @import("coords.zig");
+const lib = @import("astrolib");
+const ang = lib.ang;
+const ast = lib.ast;
+const crd = lib.crd;
+const AstroDate = ast.AstroDate;
+const TimeZone = ast.TimeZone;
+const UnixTime = ast.UnixTime;
+const Year = ast.Year;
+const Month = ast.Month;
+const Day = ast.Day;
 const Angle = ang.Angle;
 const DMS = ang.DMS;
 const HMS = ang.HMS;
@@ -26,16 +30,16 @@ const print = std.debug.print;
 // Chapter 3 - Time Conversions
 test "Chapter 3" {
     // 1. Was 1984 a leap year? (yes)
-    try expect(ad.isLeapYear(1984) == true);
+    try expect(ast.isLeapYear(1984) == true);
 
     // 2. Was 1974 a leap year? (no)
-    try expect(ad.isLeapYear(1974) == false);
+    try expect(ast.isLeapYear(1974) == false);
 
     // 3. Was 2000 a leap year? (yes)
-    try expect(ad.isLeapYear(2000) == true);
+    try expect(ast.isLeapYear(2000) == true);
 
     // 4. Was 1900 a leap year? (no)
-    try expect(ad.isLeapYear(1900) == false);
+    try expect(ast.isLeapYear(1900) == false);
 
     // 5 Convert midnight UT on November 1, 2010 to its Julian day number. (2455501.5)
     var date = AstroDate{ .year = 2010, .month = 11, .day = 1, .hour = 0, .min = 0, .sec = 0 };
@@ -80,7 +84,7 @@ test "Chapter 3" {
     try expect(doy == 303);
 
     // 14. If the date was 250 days into 1900, what was the date? (September 7, 1900)
-    date = ad.dateFromDaysAndYear(250, 1900);
+    date = ast.dateFromDaysAndYear(250, 1900);
     try expect(date.year == 1900 and date.month == 9 and date.day == 7);
 
     // 15. Assume that the date is 12/12/2014, and an observer in the EST time zone is at
@@ -89,14 +93,14 @@ test "Chapter 3" {
     //
     // UT = 01:00:00 (next day), GST = 06:26:34 (12/13/2014), and LST = 01:18:34 (12/13/2014)
     date = AstroDate{ .year = 2014, .month = 12, .day = 12, .hour = 20, .min = 0, .sec = 0,
-                     .tz = ad.tzEST };
-    var ut_date = ad.lctToUT(date);
+                     .tz = ast.tzEST };
+    var ut_date = ast.lctToUT(date);
     try expect(ut_date.year == 2014 and ut_date.month == 12 and ut_date.day == 13 and
                ut_date.hour == 1 and ut_date.min == 0 and ut_date.sec == 0);
-    var gst_date = ad.utToGST(ut_date);
+    var gst_date = ast.utToGST(ut_date);
     try expect(gst_date.year == 2014 and gst_date.month == 12 and gst_date.day == 13 and
                gst_date.hour == 6 and gst_date.min == 26 and gst_date.sec == 34);
-    var lst_date = ad.gstToLST(gst_date, -77.0);
+    var lst_date = ast.gstToLST(gst_date, -77.0);
     try expect(lst_date.year == 2014 and lst_date.month == 12 and lst_date.day == 13 and
                lst_date.hour == 1 and lst_date.min == 18 and lst_date.sec == 34);
 
@@ -107,13 +111,13 @@ test "Chapter 3" {
     // GST = 01:54:20, UT = 07:00:00 and LCT = 12:00:00
     const tz = TimeZone.init(true, 4, 0); // UTC+4 DST
     lst_date = AstroDate{ .year = 2000, .month = 7, .day = 5, .hour = 5, .min = 54, .sec = 20, .tz = tz };
-    gst_date = ad.lstToGST(lst_date, 60.0);
+    gst_date = ast.lstToGST(lst_date, 60.0);
     try expect(gst_date.year == 2000 and gst_date.month == 7 and gst_date.day == 5 and
                gst_date.hour == 1 and gst_date.min == 54 and gst_date.sec == 20);
-    ut_date = ad.gstToUT(gst_date);
+    ut_date = ast.gstToUT(gst_date);
     try expect(ut_date.year == 2000 and ut_date.month == 7 and ut_date.day == 5 and
                ut_date.hour == 7 and ut_date.min == 0 and ut_date.sec == 0);
-    date = ad.utToLCT(ut_date, tz);
+    date = ast.utToLCT(ut_date, tz);
     try expect(date.year == 2000 and date.month == 7 and date.day == 5 and
                date.hour == 12 and date.min == 0 and date.sec == 0);
 }
@@ -128,9 +132,9 @@ test "Chapter 5" {
     // h = -59°41'58", A = 224°15'27".
     var loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=45,.min=0,.sec=0}),
                                       Angle.fromDMS(DMS{.sign='-',.deg=100,.min=0,.sec=0}));
-    var date = AstroDate{.year=2015, .month=12, .day=1, .hour=9, .min=0, .sec=0, .tz=ad.tzPST};
-    var date_lst = ad.lctToLST(date, loc.lon);
-    var lst = Angle.fromHours(ad.hmsToDec(date_lst.hour,date_lst.min, date_lst.sec));
+    var date = AstroDate{.year=2015, .month=12, .day=1, .hour=9, .min=0, .sec=0, .tz=ast.tzPST};
+    var date_lst = ast.lctToLST(date, loc.lon);
+    var lst = Angle.fromHours(ast.hmsToDec(date_lst.hour,date_lst.min, date_lst.sec));
 
     var obj_equ = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=6,.min=0,.sec=0}),
                                    Angle.fromDMS(DMS{.sign='-',.deg=60,.min=0,.sec=0}));
@@ -154,9 +158,9 @@ test "Chapter 5" {
     //
     //   ra = 16h14m42s, dec=25°57'41"
     loc = GeoCoord.init(Angle.fromDegrees(38.25), Angle.fromDegrees(-78.3));
-    date = AstroDate{.year=2015, .month=6, .day=6, .hour=21, .min=0, .sec=0, .tz=ad.tzEDT};
-    date_lst = ad.lctToLST(date, loc.lon);
-    lst = Angle.fromHours(ad.hmsToDec(date_lst.hour,date_lst.min, date_lst.sec));
+    date = AstroDate{.year=2015, .month=6, .day=6, .hour=21, .min=0, .sec=0, .tz=ast.tzEDT};
+    date_lst = ast.lctToLST(date, loc.lon);
+    lst = Angle.fromHours(ast.hmsToDec(date_lst.hour,date_lst.min, date_lst.sec));
 
     obj_hor = HorCoord.init(Angle.fromDegrees(90), Angle.fromDegrees(45));
     obj_equ = obj_hor.toRaDec(loc.lat, lst);
@@ -176,7 +180,7 @@ test "Chapter 5" {
     // Star doesn't rise or set for the observer
     loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=45,.min=0,.sec=0}),
                                       Angle.fromDMS(DMS{.sign='-',.deg=100,.min=0,.sec=0}));
-    date = AstroDate{.year=2015, .month=12, .day=1, .hour=9, .min=0, .sec=0, .tz=ad.tzPST};
+    date = AstroDate{.year=2015, .month=12, .day=1, .hour=9, .min=0, .sec=0, .tz=ast.tzPST};
     obj_equ = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=6,.min=0,.sec=0}),
                                    Angle.fromDMS(DMS{.sign='-',.deg=60,.min=0,.sec=0}));
    
@@ -189,7 +193,7 @@ test "Chapter 5" {
     //
     // LCTr = 16ʰ57ᵐ49ˢ,  LCTs = 7ʰ59ᵐ51ˢ 
     loc = GeoCoord.init(Angle.fromDegrees(38.25), Angle.fromDegrees(-78.3));
-    date = AstroDate{.year=2015, .month=6, .day=6, .hour=21, .min=0, .sec=0, .tz=ad.tzEDT};
+    date = AstroDate{.year=2015, .month=6, .day=6, .hour=21, .min=0, .sec=0, .tz=ast.tzEDT};
     obj_equ = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=16,.min=14,.sec=42}),
                                    Angle.fromDMS(DMS{.sign='+',.deg=25,.min=57,.sec=41}));
 
