@@ -5,7 +5,7 @@
 
 const std = @import("std");
 const ang = @import("angle.zig");
-const crd = @import("coords.zig");
+const crd = @import("coord.zig");
 const Angle = ang.Angle;
 const GeoCoord = crd.GeoCoord;
 const Longitude = crd.Longitude;
