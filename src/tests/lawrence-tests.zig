@@ -1,9 +1,6 @@
 // Tests from the exercises in the book "Celestial Calculations" by J. L. Lawrence
 
 const std = @import("std");
-// const ad = @import("astrodate.zig");
-// const ang = @import("angle.zig");
-// const crd = @import("coords.zig");
 const lib = @import("astrolib");
 const ang = lib.ang;
 const ast = lib.ast;

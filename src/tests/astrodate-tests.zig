@@ -1,5 +1,4 @@
 const std = @import("std");
-// const ast = @import("astrodate.zig");
 const ast = @import("astrolib").ast;
 const AstroDate = ast.AstroDate;
 const TimeZone = ast.TimeZone;

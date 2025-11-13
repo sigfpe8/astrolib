@@ -80,7 +80,7 @@ pub fn build(b: *std.Build) void {
 
     // Create test modules for the test files
     const astrodate_tests_mod = b.createModule(.{
-        .root_source_file = b.path("src/astrodate-tests.zig"),
+        .root_source_file = b.path("src/tests/astrodate-tests.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -89,7 +89,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const lawrence_tests_mod = b.createModule(.{
-        .root_source_file = b.path("src/lawrence-tests.zig"),
+        .root_source_file = b.path("src/tests/lawrence-tests.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
