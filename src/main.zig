@@ -1,100 +1,59 @@
 const std = @import("std");
-const ad = @import("astrodate.zig");
-const AstroDate = ad.AstroDate;
-const TimeZone = ad.TimeZone;
-const Year = ad.Year;
-const Month = ad.Month;
-const Day = ad.Day;
+// const ast = @import("astrodate.zig");
+const lib = @import("astrolib");
+const ang = lib.ang;
+const ast = lib.ast;
+const crd = lib.crd;
+const Angle = ang.Angle;
+const DMS = ang.DMS;
+const HMS = ang.HMS;
+const AstroDate = ast.AstroDate;
+const TimeZone = ast.TimeZone;
+const Year = ast.Year;
+const Month = ast.Month;
+const Day = ast.Day;
+const GeoCoord = crd.GeoCoord;
+const RaDec = crd.RaDec;
 
 pub fn main() !void {
-    const dp: f64 = 360.0 * 3 + 25.0;
-    const dn: f64 = -360.0 * 3 - 25.0;
-    const rp: f64 = std.math.pi * 6 + 0.25;
-    const rn: f64 = -std.math.pi * 6 - 0.25;
-
-    std.debug.print("dp: {d}, dp mod 360: {d}\n", .{dp, @mod(dp, 360.0)});
-    std.debug.print("dp: {d}, dp rem 360: {d}\n", .{dp, @rem(dp, 360.0)});
-    std.debug.print("dn: {d}, dn mod 360: {d}\n", .{dn, @mod(dn, 360.0)});
-    std.debug.print("dn: {d}, dn rem 360: {d}\n", .{dn, @rem(dn, 360.0)});
-    std.debug.print("rp: {d}, rp mod 2π:  {d}\n", .{rp, @mod(rp, std.math.pi * 2)});
-    std.debug.print("rp: {d}, rp rem 2π:  {d}\n", .{rp, @rem(rp, std.math.pi * 2)});
-    std.debug.print("rn: {d}, rn mod 2π:  {d}\n", .{rn, @mod(rn, std.math.pi * 2)});
-    std.debug.print("rn: {d}, rn rem 2π:  {d}\n", .{rn, @rem(rn, std.math.pi * 2)});
-
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    var now = ast.now();
+    now.tz = ast.TimeZone.init(false, -3, 0);
 
-    var now = ad.now();
-    now.tz = ad.TimeZone.init(true, 13, 30);
-
-    // const date = AstroDate{.year = 2025, .month = 5, .day = 23, .hour = 23, .min = 59, .sec = 59};
     const date_time_str = try now.toString(allocator);
     std.debug.print("Current date and time: {s}\n", .{date_time_str});
-    std.debug.print("Sizeof(AstroDate): {}\n", .{@sizeOf(AstroDate)});
-    std.debug.print("Sizeof(TimeZone): {}\n", .{@sizeOf(TimeZone)});
+    // std.debug.print("Sizeof(AstroDate): {}\n", .{@sizeOf(AstroDate)});
+    // std.debug.print("Sizeof(TimeZone): {}\n", .{@sizeOf(TimeZone)});
     allocator.free(date_time_str);
 
     var date = AstroDate{ .year = 2010, .month = 2, .day = 7, .hour = 23, .min = 30, .sec = 0 };
-    date = ad.utToGST(date);
+    date = ast.utToGST(date);
     const date_str = try date.toString(allocator);
     std.debug.print("Date from JD 2436116.31: {s}\n", .{date_str});
     allocator.free(date_str);
 
+    const loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=38,.min=0,.sec=0}),   // New York City
+                                      Angle.fromDMS(DMS{.sign='-',.deg=78,.min=0,.sec=0}));
+    date= AstroDate{ .year = 2016, .month = 1, .day = 21,
+                     .hour = 12, .min = 0, .sec = 0, .tz = ast.tzEST };
+    const obj = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=5,.min=55,.sec=0}),  // Betelgeuse
+                                  Angle.fromDMS(DMS{.sign='+',.deg=7,.min=30,.sec=0}));
 
-    // var date = ad.fromJD(2436116.31);
-    // var date_str = try date.toString(allocator);
-    // std.debug.print("Date from JD 2436116.31: {s}\n", .{date_str});
-    // allocator.free(date_str);
+    const rs = try crd.riseAndSet(loc, date, obj);
+    const rise_time_str = try rs.rise_time.toString(allocator);
+    const set_time_str = try rs.set_time.toString(allocator);
+    const rise_az_str = try rs.rise_az.toDMSString(allocator);
+    const set_az_str = try rs.set_az.toDMSString(allocator);
 
-    // date = ad.fromJD(1842713.0);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from JD 1842713.0: {s}\n", .{date_str});
-    // allocator.free(date_str);
+    std.debug.print("Rise Time: {s}, Azimuth: {s}\n", .{rise_time_str, rise_az_str});
+    std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_time_str, set_az_str});
 
-    // date = ad.fromJD(1507900.13);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from JD 1507900.13: {s}\n", .{date_str});
-    // allocator.free(date_str);
-    // var date = ad.fromUnixTime(-1);
-    // var date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -1: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(-86400);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -86400: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(-2678400);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -2678400: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(-2721600);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -2721600: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(-58060800);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -58060800: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(-2723445);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -2723445: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(-2208988800);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time -2208988800: {s}\n", .{date_str});
-    // allocator.free(date_str);
-
-    // date = ad.fromUnixTime(1672531199);
-    // date_str = try date.toString(allocator);
-    // std.debug.print("Date from Unix time 1672531199: {s}\n", .{date_str});
-    // allocator.free(date_str);
+    allocator.free(rise_time_str);
+    allocator.free(set_time_str);
+    allocator.free(rise_az_str);
+    allocator.free(set_az_str);
 }
 
