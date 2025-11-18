@@ -42,7 +42,7 @@ test "toDateString" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const date = AstroDate{.year = 2000, .month = 1, .day = 1, .hour = 12};
+    const date = AstroDate{.year = 2000, .month = 1, .day = 1, .hours = 12};
     const date_str = try date.toDateString(allocator);
     try expect(std.mem.eql(u8, date_str, "2000-01-01"));
     allocator.free(date_str);
@@ -53,7 +53,7 @@ test "toTimeString" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const date = AstroDate{.year = 2000, .month = 1, .day = 1, .hour = 12, .min = 30, .sec = 30 };
+    const date = AstroDate.fromDateAndHMS(2000, 1, 1, 12, 30, 30, .{});
     const time_str = try date.toTimeString(allocator);
     try expect(std.mem.eql(u8, time_str, "12:30:30"));
     allocator.free(time_str);
@@ -64,7 +64,7 @@ test "toDateTimeString" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const date = AstroDate{.year = 2025, .month = 5, .day = 23, .hour = 23, .min = 59, .sec = 59};
+    const date = AstroDate.fromDateAndHMS(2025, 5, 23, 23, 59, 59, .{});
     const date_time_str = try date.toDateTimeString(allocator);
     try expect(std.mem.eql(u8, date_time_str, "2025-05-23 23:59:59"));
     allocator.free(date_time_str);
@@ -109,53 +109,60 @@ test "easterDate" {
 }
 
 const TimeTest = struct {
-    date: AstroDate,
+    year: Year,
+    month: Month,
+    day: Day,
+    hour: u32,
+    min: u32,
+    sec: u32,
     ts: UnixTime,
 };
 
 const TimeTests = [_]TimeTest{
-    .{ .date = .{ .year=1970, .month= 1, .day= 1, .hour= 0, .min= 0, .sec= 0}, .ts=            0 },
-    .{ .date = .{ .year=1970, .month= 1, .day= 1, .hour=12, .min=30, .sec=45}, .ts=        45045 },
-    .{ .date = .{ .year=1970, .month= 1, .day= 1, .hour=23, .min=59, .sec=59}, .ts=        86399 },
-    .{ .date = .{ .year=1970, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=     31535999 },
-    .{ .date = .{ .year=1971, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=     63071999 },
-    .{ .date = .{ .year=1972, .month= 2, .day=29, .hour= 0, .min= 0, .sec= 0}, .ts=     68169600 },
-    .{ .date = .{ .year=1972, .month= 3, .day= 1, .hour= 0, .min= 0, .sec= 0}, .ts=     68256000 },
-    .{ .date = .{ .year=1980, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=    347155199 },
-    .{ .date = .{ .year=1999, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=    946684799 },
-    .{ .date = .{ .year=2000, .month= 2, .day=29, .hour=12, .min= 0, .sec= 0}, .ts=    951825600 },
-    .{ .date = .{ .year=2022, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=   1672531199 },
-    .{ .date = .{ .year=2038, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=   2177452799 },
-    .{ .date = .{ .year=2138, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=   5333126399 },
+    .{ .year =1970, .month =  1, .day =  1, .hour= 0, .min= 0, .sec= 0, .ts=            0 },
+    .{ .year =1970, .month =  1, .day =  1, .hour=12, .min=30, .sec=45, .ts=        45045 },
+    .{ .year =1970, .month =  1, .day =  1, .hour=23, .min=59, .sec=59, .ts=        86399 },
+    .{ .year =1970, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=     31535999 },
+    .{ .year =1971, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=     63071999 },
+    .{ .year =1972, .month =  2, .day = 29, .hour= 0, .min= 0, .sec= 0, .ts=     68169600 },
+    .{ .year =1972, .month =  3, .day =  1, .hour= 0, .min= 0, .sec= 0, .ts=     68256000 },
+    .{ .year =1980, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=    347155199 },
+    .{ .year =1999, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=    946684799 },
+    .{ .year =2000, .month =  2, .day = 29, .hour=12, .min= 0, .sec= 0, .ts=    951825600 },
+    .{ .year =2022, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=   1672531199 },
+    .{ .year =2038, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=   2177452799 },
+    .{ .year =2138, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=   5333126399 },
 
-    .{ .date = .{ .year=1969, .month=12, .day=31, .hour=23, .min=59, .sec=59}, .ts=           -1 },
-    .{ .date = .{ .year=1969, .month=12, .day=31, .hour= 0, .min= 0, .sec= 0}, .ts=       -86400 },
-    .{ .date = .{ .year=1969, .month=12, .day= 1, .hour= 0, .min= 0, .sec= 0}, .ts=     -2678400 },
-    .{ .date = .{ .year=1969, .month=11, .day=30, .hour=12, .min= 0, .sec= 0}, .ts=     -2721600 },
-    .{ .date = .{ .year=1969, .month=11, .day=30, .hour=11, .min=30, .sec= 0}, .ts=     -2723400 },
-    .{ .date = .{ .year=1969, .month=11, .day=30, .hour=11, .min=29, .sec=15}, .ts=     -2723445 },
-    .{ .date = .{ .year=1968, .month=12, .day=15, .hour= 0, .min= 0, .sec= 0}, .ts=    -33004800 },
-    .{ .date = .{ .year=1968, .month= 3, .day= 1, .hour= 0, .min= 0, .sec= 0}, .ts=    -57974400 },
-    .{ .date = .{ .year=1968, .month= 2, .day=29, .hour= 0, .min= 0, .sec= 0}, .ts=    -58060800 },
-    .{ .date = .{ .year=1968, .month= 2, .day=28, .hour= 0, .min= 0, .sec= 0}, .ts=    -58147200 },
-    .{ .date = .{ .year=1900, .month= 1, .day= 1, .hour= 0, .min= 0, .sec= 0}, .ts=  -2208988800 },
+    .{ .year = 1969, .month = 12, .day = 31, .hour=23, .min=59, .sec=59, .ts=           -1 },
+    .{ .year = 1969, .month = 12, .day = 31, .hour= 0, .min= 0, .sec= 0, .ts=       -86400 },
+    .{ .year = 1969, .month = 12, .day =  1, .hour= 0, .min= 0, .sec= 0, .ts=     -2678400 },
+    .{ .year = 1969, .month = 11, .day = 30, .hour=12, .min= 0, .sec= 0, .ts=     -2721600 },
+    .{ .year = 1969, .month = 11, .day = 30, .hour=11, .min=30, .sec= 0, .ts=     -2723400 },
+    .{ .year = 1969, .month = 11, .day = 30, .hour=11, .min=29, .sec=15, .ts=     -2723445 },
+    .{ .year = 1968, .month = 12, .day = 15, .hour= 0, .min= 0, .sec= 0, .ts=    -33004800 },
+    .{ .year = 1968, .month =  3, .day =  1, .hour= 0, .min= 0, .sec= 0, .ts=    -57974400 },
+    .{ .year = 1968, .month =  2, .day = 29, .hour= 0, .min= 0, .sec= 0, .ts=    -58060800 },
+    .{ .year = 1968, .month =  2, .day = 28, .hour= 0, .min= 0, .sec= 0, .ts=    -58147200 },
+    .{ .year = 1900, .month =  1, .day =  1, .hour= 0, .min= 0, .sec= 0, .ts=  -2208988800 },
 };
 
 test "fromUnixTimeT" {
     for (TimeTests) |tst| {
         const date = AstroDate.fromUnixTime(tst.ts);
-        try expect(date.year == tst.date.year and
-                   date.month == tst.date.month and
-                   date.day == tst.date.day and
-                   date.hour == tst.date.hour and
-                   date.min == tst.date.min and
-                   date.sec == tst.date.sec);
+        const hms = ast.hrsToHMS(date.hours);
+        try expect(date.year  == tst.year and
+                   date.month == tst.month and
+                   date.day   == tst.day and
+                   hms.hour   == tst.hour and
+                   hms.min    == tst.min and
+                   hms.sec    == tst.sec);
     }
 }
 
 test "toUnixTime" {
     for (TimeTests) |tst| {
-        const ts = AstroDate.toUnixTime(tst.date);
+        const date = AstroDate.fromDateAndHMS(tst.year,tst.month,tst.day,tst.hour,tst.min,tst.sec, .{});
+        const ts = AstroDate.toUnixTime(date);
         try expect(ts == tst.ts);
     }
 }
@@ -177,11 +184,11 @@ test "hmsToDec" {
         while (m < 60) : (m += 1) {
             var s: u8 = 0;
             while (s < 60) : (s += 1) {
-                const dec = ast.hmsToDec(h, m, s);
-                const date = ast.decToHMS(dec);
-                try expect(date.hour == h and
-                           date.min == m and
-                           date.sec == s);
+                const hrs = ast.hmsToHrs(.{.hour=h, .min=m, .sec=s});
+                const hms = ast.hrsToHMS(hrs);
+                try expect(hms.hour == h and
+                           hms.min == m and
+                           hms.sec == s);
             }
         }
     }
@@ -189,30 +196,36 @@ test "hmsToDec" {
 
 test "utToGST" {
     // [Lawrence, 2018] p 47-48
-    const utDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=23, .min=30, .sec=0 };
+    const utDate = AstroDate.fromDateAndHMS(2010, 2, 7, 23, 30, 0, .{});
     const gstDate = ast.utToGST(utDate);
-    try expect(gstDate.hour == 8 and gstDate.min == 41 and gstDate.sec == 53);
+    const hms = ast.hrsToHMS(gstDate.hours);
+    try expect(hms.hour == 8 and hms.min == 41 and hms.sec == 53);
 }
 
 test "gstToUT" {
     // [Lawrence, 2018] p 48-49
-    const gstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=8, .min=41, .sec=53 };
+    const gstDate = AstroDate.fromDateAndHMS(2010, 2, 7, 8, 41, 53, .{});
     const utDate = ast.gstToUT(gstDate);
-    try expect(utDate.hour == 23 and utDate.min == 30 and utDate.sec == 0);
+    const hms = ast.hrsToHMS(utDate.hours);
+    try expect(hms.hour == 23 and hms.min == 30 and hms.sec == 0);
 }
 
 test "gstToLST" {
     // [Lawrence, 2018] p 50
-    const gstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=2, .min=3, .sec=41 };
+    // const gstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=2, .min=3, .sec=41 };
+    const gstDate = AstroDate.fromDateAndHMS(2010, 2, 7, 2, 3, 41, .{});
     const lstDate = ast.gstToLST(gstDate, -40.0); // Longitude 40° W
-    try expect(lstDate.hour == 23 and lstDate.min == 23 and lstDate.sec == 41);
+    const hms = ast.hrsToHMS(lstDate.hours);
+    try expect(hms.hour == 23 and hms.min == 23 and hms.sec == 41);
 }
 
 test "lstToGST" {
     // [Lawrence, 2018] p 50
-    const lstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=23, .min=23, .sec=41 };
+    // const lstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=23, .min=23, .sec=41 };
+    const lstDate = AstroDate.fromDateAndHMS(2010, 2, 7, 23, 23, 41, .{});
     const gstDate = ast.lstToGST(lstDate, 50.0); // Longitude 50° E
-    try expect(gstDate.hour == 20 and gstDate.min == 3 and gstDate.sec == 41);
+    const hms = ast.hrsToHMS(gstDate.hours);
+    try expect(hms.hour == 20 and hms.min == 3 and hms.sec == 41);
 }
 
 test "nextDay" {

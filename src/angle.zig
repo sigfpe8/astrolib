@@ -57,9 +57,6 @@ pub const Angle = union(enum) {
         return Angle{ .hrs = hours };
     }
 
-    // pub fn fromHMS(hour: i64, min: i64, sec: f64) Angle {
-    //     return Angle{ .hrs = @as(f64, hour) + @as(f64, min) * min_to_hrs + sec * sec_to_hrs };
-    // }
     pub fn fromHMS(hms: HMS) Angle {
         var hours: f64 = @as(f64, @floatFromInt(hms.hour)) + @as(f64, @floatFromInt(hms.min)) * min_to_hrs + hms.sec * sec_to_hrs;
         if (hms.sign == '-') {

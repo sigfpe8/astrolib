@@ -29,7 +29,7 @@ pub fn main() !void {
     // std.debug.print("Sizeof(TimeZone): {}\n", .{@sizeOf(TimeZone)});
     allocator.free(date_time_str);
 
-    var date = AstroDate{ .year = 2010, .month = 2, .day = 7, .hour = 23, .min = 30, .sec = 0 };
+    var date = AstroDate.fromDateAndHMS(2010, 2, 7, 23, 30, 0, .{});
     date = ast.utToGST(date);
     const date_str = try date.toString(allocator);
     std.debug.print("Date from JD 2436116.31: {s}\n", .{date_str});
@@ -37,8 +37,7 @@ pub fn main() !void {
 
     const loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=38,.min=0,.sec=0}),   // New York City
                                       Angle.fromDMS(DMS{.sign='-',.deg=78,.min=0,.sec=0}));
-    date= AstroDate{ .year = 2016, .month = 1, .day = 21,
-                     .hour = 12, .min = 0, .sec = 0, .tz = ast.tzEST };
+    date= AstroDate.fromDateAndHMS(2016, 1, 21, 12, 0, 0, ast.tzEST);
     const obj = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=5,.min=55,.sec=0}),  // Betelgeuse
                                   Angle.fromDMS(DMS{.sign='+',.deg=7,.min=30,.sec=0}));
 

@@ -36,6 +36,14 @@ const min_to_sec = ang.min_to_sec;
 const min_to_hrs = ang.min_to_hrs;
 const sec_to_hrs = ang.sec_to_hrs;
 
+/// Time in hours, minutes and seconds (always >= 0)
+/// cf. Angle HMS (see angle.zig, may be negative)
+pub const THMS = struct {
+    hour: u32,
+    min:  u32,
+    sec:  u32,
+};
+
 pub const TimeZone = packed struct(u8) {
     dst: bool = false, // Daylight Saving Time (DST) flag
     offset: i7 = 0,    // Timezone offset in 15-min units (default is UTC)
@@ -83,47 +91,43 @@ pub const AstroDate = struct {
     month: Month,   // 1 = Jan, 2 = Feb, ..., 12 = Dec
     day:   Day,     // Day number (1...31)
 
-    // Time of day, default to midnight UTC (00:00:00)
-    hour:  u8 = 0,  // Hour number (0...23)
-    min:   u8 = 0,  // Minute number (0...59)
-    sec:   u8 = 0,  // Second number (0...59)
+    // Time of day in decimal hours [0, 24)
+    hours: f64 = 0,         // Decimal hours since midnight
     tz:    TimeZone = .{},  // Encoded timezone, defaults to UTC
 
     pub fn fromDateAndHours(year: Year, month: Month, day: Day, hours: f64, tz: TimeZone) AstroDate {
         std.debug.assert(hours >= 0 and hours < 24);
 
-        const hour = @trunc(hours);
-        const min = @trunc((hours - hour) * hrs_to_min);
-        const sec = @round(((hours - hour) * hrs_to_min - min) * min_to_sec);
-        var hi: u8 = @intFromFloat(hour);
-        var mi: u8 =  @intFromFloat(min);
-        var si: u8 = @intFromFloat(sec);
-        if (si >= 60) {
-            si = 0;
-            mi += 1;
-            if (mi >= 60) {
-                mi = 0;
-                hi += 1;
-            }
-        }
-
         return AstroDate{
             .year = year,
             .month = month,
             .day = day,
-            .hour = hi,
-            .min = mi,
-            .sec = si,
+            .hours = hours,
             .tz = tz
         };
     }
 
-    /// Discard date and return time as decimal hours
-    pub fn toHours(self: Self) f64 {
-        const hours: f64 = @as(f64,@floatFromInt(self.hour)) +
-                           @as(f64,@floatFromInt(self.min)) * min_to_hrs +
-                           @as(f64,@floatFromInt(self.sec)) * sec_to_hrs;
-        return hours;
+    pub fn fromDateAndHMS(year: Year, month: Month, day: Day, hour: u32, min: u32, sec: u32, tz: TimeZone) AstroDate {
+        const hours = hmsToHrs(.{.hour=hour, .min=min, .sec=sec});
+        return AstroDate{
+            .year = year,
+            .month = month,
+            .day = day,
+            .hours = hours,
+            .tz = tz
+        };
+    }
+
+    pub fn fromYearAndDays(year: Year, days: u32) AstroDate {
+        var month: Month = 1;
+        var day_of_month: u32 = days;
+        var dim: u32 = daysInMonth(year, month);
+        while (day_of_month > dim) {
+            day_of_month -= dim;
+            month += 1;
+            dim = daysInMonth(year, month);
+        }
+        return AstroDate{ .year = year, .month = month, .day = @truncate(day_of_month) };
     }
 
     // The day following
@@ -149,7 +153,7 @@ pub const AstroDate = struct {
     /// Create AstroDate from Julian Day Number
     pub fn fromJD(jd: f64) AstroDate {
         const z: f64 = @trunc(jd + 0.5);
-        var f: f64 = jd + 0.5 - z;  // Fractional part of JD
+        const f: f64 = jd + 0.5 - z;  // Fractional part of JD
         const a: f64 = if (z < 2299161) z else blk: {
                     const alpha: f64 = @trunc((z - 1867216.25) / 36524.25);
                     const beta: f64 = z + 1 + alpha - @trunc(alpha / 4);
@@ -163,15 +167,8 @@ pub const AstroDate = struct {
         const month: Month = @intFromFloat(if (e < 14) e - 1 else e - 13);
         const year: Year = @intFromFloat(if (month > 2) c - 4716 else c - 4715);
 
-        f = f * 24;
-        const hour: u8 = @truncate(@as(u64,@intFromFloat(@trunc(f))));
-        f = (f - @as(f64, @floatFromInt(hour))) * 60;
-        const min: u8 = @truncate(@as(u64,@intFromFloat(@trunc(f))));
-        f = (f - @as(f64, @floatFromInt(min))) * 60;
-        const sec: u8 = @truncate(@as(u64,@intFromFloat(@trunc(f))));
-
         return AstroDate{ .year = year, .month = month, .day = day,
-                        .hour = hour, .min = min, .sec = sec, .tz = .{} };
+                          .hours = f * 24, .tz = .{} };
     }
 
 
@@ -181,10 +178,7 @@ pub const AstroDate = struct {
     pub fn toJD(self: Self) f64 {
         var yr: f64 = @floatFromInt(self.year);
         var mo: f64 = @floatFromInt(self.month);
-        const dy: f64 = @as(f64,@floatFromInt(self.day))
-            + @as(f64,@floatFromInt(self.hour)) / 24
-            + @as(f64,@floatFromInt(self.min)) / 1440
-            + @as(f64,@floatFromInt(self.sec)) / 86400;
+        const dy: f64 = @as(f64,@floatFromInt(self.day)) + self.hours / 24;
 
         if (self.month <= 2) {
             yr -= 1;
@@ -246,10 +240,11 @@ pub const AstroDate = struct {
 
     // Return "HH:MM:SS"
     pub fn toTimeString(self: Self, allocator: Allocator) ![]const u8 {
+        const hms = hrsToHMS(self.hours);
         return try std.fmt.allocPrint(allocator, "{d:0>2}:{d:0>2}:{d:0>2}", .{
-            @as(u32, self.hour),
-            @as(u32, self.min),
-            @as(u32, self.sec)
+            hms.hour,
+            hms.min,
+            hms.sec
         });
     }
 
@@ -282,14 +277,14 @@ pub const AstroDate = struct {
     pub fn noon(self: Self) Self {
         // Return a new AstroDate with the same date but time set to noon (12:00:00)
         return .{ .year = self.year, .month = self.month, .day = self.day,
-                  .hour = 12, .min = 0, .sec = 0, .tz = self.tz };
+                  .hours = 12, .tz = self.tz };
     }
 
     /// Return same date at midnight (00:00:00)
     pub fn midnight(self: Self) Self {
         // Return a new AstroDate with the same date but time set to midnight (00:00:00)
         return .{ .year = self.year, .month = self.month, .day = self.day,
-                  .hour = 0, .min = 0, .sec = 0, .tz = self.tz };
+                  .hours = 0, .tz = self.tz };
     }
 
     /// Create AstroDate from Unix time
@@ -297,12 +292,7 @@ pub const AstroDate = struct {
         if (ts >= 0) {  // >= 0 means after epoch (Jan 1, 1970)
             var ndays = @divTrunc(ts, std.time.s_per_day)+1;   // Number of days since epoch, including this day
             const secs_today = @rem(ts, std.time.s_per_day);   // Seconds since midnight
-
-            var tmp = secs_today;
-            const hour: u8 = @truncate(@as(u64,@bitCast(@divTrunc(tmp, std.time.s_per_hour))));
-            tmp = @rem(tmp, std.time.s_per_hour);
-            const min:  u8 = @truncate(@as(u64,@bitCast(@divTrunc(tmp, std.time.s_per_min))));
-            const sec:  u8 = @truncate(@as(u64,@bitCast(@rem(tmp, std.time.s_per_min))));
+            const hours: f64 = @as(f64,@floatFromInt(secs_today)) / std.time.s_per_hour;    // Hours since midnight
 
             var year: Year = 1970;
             var month: Month = 1;
@@ -324,17 +314,12 @@ pub const AstroDate = struct {
             const day: Day = @truncate(@as(u64,@bitCast(ndays)));
 
             return AstroDate{ .year = year, .month = month, .day = day,
-                            .hour = hour, .min = min, .sec = sec };
+                              .hours = hours  };
         } else {    // Before epoch (Jan 1, 1970)
             const tsp = @as(UnixTime, -ts)-1; // Positive timestamp for calculations
-            var ndays = @divTrunc(tsp, std.time.s_per_day);   // Number of days since epoch, including this day
-            const secs_today = @rem(tsp, std.time.s_per_day);   // Seconds since midnight
-
-            var tmp = std.time.s_per_day - 1 - secs_today;
-            const hour: u8 = @truncate(@as(u64,@bitCast(@divTrunc(tmp, std.time.s_per_hour))));
-            tmp = @rem(tmp, std.time.s_per_hour);
-            const min:  u8 = @truncate(@as(u64,@bitCast(@divTrunc(tmp, std.time.s_per_min))));
-            const sec:  u8 = @truncate(@as(u64,@bitCast(@rem(tmp, std.time.s_per_min))));
+            var ndays = @divTrunc(tsp, std.time.s_per_day);    // Number of days since epoch, including this day
+            const secs_today = @rem(tsp, std.time.s_per_day);  // Seconds since midnight
+            const hours: f64 = (86399.0 - @as(f64,@floatFromInt(secs_today))) / std.time.s_per_hour;    // Hours since midnight
 
             var year: Year = 1969;
             var month: Month = 12;
@@ -356,7 +341,7 @@ pub const AstroDate = struct {
             const day: Day = @truncate(@as(u64,@bitCast(days_in_month - ndays)));
 
             return AstroDate{ .year = year, .month = month, .day = day,
-                            .hour = hour, .min = min, .sec = sec };
+                              .hours = hours };
         }
     }
 
@@ -383,15 +368,10 @@ pub const AstroDate = struct {
             // Add the days in the current month
             ndays += @as(i64, @intCast(self.day - 1));
 
-            const hour = @as(i64, @intCast(self.hour));
-            const min = @as(i64, @intCast(self.min));
-            const sec = @as(i64, @intCast(self.sec));
+            const secs_today: i64 = @intFromFloat(self.hours * 3600.0);
 
             // Convert to seconds
-            return @as(UnixTime, ndays * std.time.s_per_day + 
-                    hour * std.time.s_per_hour +
-                    min * std.time.s_per_min +
-                    sec);
+            return @as(UnixTime, ndays * std.time.s_per_day + secs_today);
         } else {
             // For years before 1970, we need to count backwards
             year = 1969;
@@ -410,15 +390,10 @@ pub const AstroDate = struct {
             // Add the days in the rest of the current month
             ndays -= daysInMonth(year, month) - self.day;
 
-            const hour = 23 - @as(i64, self.hour);
-            const min  = 59 - @as(i64, self.min);
-            const sec  = 60 - @as(i64, self.sec);
+            const secs_today: i64 = @intFromFloat(self.hours * 3600.0);
 
             // Convert to seconds
-            return @as(UnixTime, ndays * std.time.s_per_day -
-                    hour * std.time.s_per_hour -
-                    min * std.time.s_per_min -
-                    sec);
+            return @as(UnixTime, (ndays - 1) * std.time.s_per_day + secs_today);
         }
     }
 
@@ -438,7 +413,7 @@ pub const AstroDate = struct {
         }
 
         return AstroDate{.year=y, .month=m, .day=d,
-                         .hour=self.hour, .min=self.min, .sec=self.sec, .tz=self.tz};
+                         .hours=self.hours, .tz=self.tz};
     }
 
     pub fn adNextDay(self: AstroDate) AstroDate {
@@ -457,7 +432,7 @@ pub const AstroDate = struct {
         }
 
         return AstroDate{.year=y, .month=m, .day=d,
-                         .hour=self.hour, .min=self.min, .sec=self.sec, .tz=self.tz};
+                         .hours=self.hours, .tz=self.tz};
     }
 };
 
@@ -498,19 +473,6 @@ pub fn daysInMonth(year: Year, month: Month) u32 {
 pub fn now() AstroDate {
     const ts: UnixTime = std.time.timestamp();
     return AstroDate.fromUnixTime(ts);
-}
-
-pub fn dateFromDaysAndYear(days: u32, year: Year) AstroDate {
-    var month: Month = 1;
-    var day_of_month: u32 = days;
-    var dim: u32 = daysInMonth(year, month);
-    while (day_of_month > dim) {
-        day_of_month -= dim;
-        month += 1;
-        dim = daysInMonth(year, month);
-    }
-    return AstroDate{ .year = year, .month = month, .day = @truncate(day_of_month),
-                      .hour = 0, .min = 0, .sec = 0 };
 }
 
 pub fn nextDay(year: Year, month: Month, day: Day) struct { Year, Month, Day } {
@@ -575,29 +537,29 @@ pub fn daysBetweenDates(date1: AstroDate, date2: AstroDate) i64 {
     return jd2 - jd1;
 }
 
-/// Convert hours, minutes, seconds to decimal hours
- pub fn hmsToDec(hour: u8, min: u8, sec: u8) f64 {
-    return @as(f64, @floatFromInt(hour)) + 
-           (@as(f64, @floatFromInt(min)) * 60 + @as(f64, @floatFromInt(sec))) / 3600;
-
+/// Convert hh, mm, ss to decimal hours
+pub fn hmsToHrs(hms: THMS) f64 {
+    return @as(f64, @floatFromInt(hms.hour)) + 
+           (@as(f64, @floatFromInt(hms.min)) * std.time.s_per_min + @as(f64, @floatFromInt(hms.sec))) / std.time.s_per_hour;
 }
 
-/// Convert decimal hours to AstroDate (hours, minutes, seconds)
-pub fn decToHMS(dec: f64) AstroDate {
-    var h: u8 = @intFromFloat(@trunc(dec));
-    const hf: f64 = @floatFromInt(h);
-    var m: u8 = @intFromFloat(@trunc((dec - hf) * 60));
-    const mf: f64 = @floatFromInt(m);
-    var s: u8 = @intFromFloat(@round(((dec - hf) * 60 - mf) * 60));
-    if (s >= 60) {
-        s = 0;
-        m += 1;
+/// Convert decimal hours to hh, mm, ss, rounding up as necessary
+pub fn hrsToHMS(hours: f64) THMS {
+    const hour = @trunc(hours);
+    const min = @trunc((hours - hour) * hrs_to_min);
+    const sec = @round(((hours - hour) * hrs_to_min - min) * min_to_sec);
+    var hi: u32 = @intFromFloat(hour);
+    var mi: u32 =  @intFromFloat(min);
+    var si: u32 = @intFromFloat(sec);
+    if (si >= 60) {
+        si = 0;
+        mi += 1;
+        if (mi >= 60) {
+            mi = 0;
+            hi += 1;
+        }
     }
-    if (m >= 60) {
-        m = 0;
-        h += 1;
-    }
-    return AstroDate{ .year = 1, .month = 1, .day = 1, .hour = h, .min = m, .sec = s };
+    return THMS{ .hour = hi, .min = mi, .sec = si };
 }
 
 /// Convert LCT (Local Civil Time) to UT (Universal Time)
@@ -608,8 +570,7 @@ pub fn lctToUT(date: AstroDate) AstroDate {
     var y: Year = date.year;
     var m: Month = date.month;
     var d: Day = date.day;
-    const lct_dec = hmsToDec(date.hour, date.min, date.sec);
-    var ut_dec = lct_dec - date.tz.getOffsetHours(); // Takes care of DST as well
+    var ut_dec = date.hours - date.tz.getOffsetHours(); // Takes care of DST as well
     if (ut_dec < 0) {
         y, m, d = previousDay(y, m, d);
         ut_dec += 24; // Ensure UT is positive
@@ -627,8 +588,7 @@ pub fn utToLCT(date: AstroDate, tz: TimeZone) AstroDate {
     var y: Year = date.year;
     var m: Month = date.month;
     var d: Day = date.day;
-    const ut_dec = hmsToDec(date.hour, date.min, date.sec);
-    var lct_dec = ut_dec + tz.getOffsetHours(); // Takes care of DST as well
+    var lct_dec = date.hours + tz.getOffsetHours(); // Takes care of DST as well
     if (lct_dec < 0) {
         y, m, d = previousDay(y, m, d);
         lct_dec += 24; // Ensure LCT is positive
@@ -651,8 +611,7 @@ pub fn utToGST(date: AstroDate) AstroDate {
     const r = 6.6460656 + t * (2400.051262 + 0.00002581 * t);
     const b = 24 - r + 24 * (@as(f64,@floatFromInt(date.year)) - 1900);
     const t0 = 0.0657098 * days - b;
-    const ut = hmsToDec(date.hour, date.min, date.sec); // Convert UTC time to decimal hours
-    var gst = t0 + 1.002737909 * ut; // Greenwich Sidereal Time in decimal hours
+    var gst = t0 + 1.002737909 * date.hours; // Greenwich Sidereal Time in decimal hours
     if (gst < 0) {
         gst += 24;
     } else if (gst >= 24) {
@@ -679,8 +638,7 @@ pub fn gstToUT(date: AstroDate) AstroDate {
         t0 -= 24;
     }
     // The above steps are the same as in utToGST
-    const gst = hmsToDec(date.hour, date.min, date.sec); // Convert GST time to decimal hours
-    var a = gst - t0;
+    var a = date.hours - t0;
     if (a < 0) {
         a += 24;
     }
@@ -693,8 +651,7 @@ pub fn gstToUT(date: AstroDate) AstroDate {
 pub fn gstToLST(gst: AstroDate, longitude_deg: f64) AstroDate {
     // Longitude: positive for East, negative for West
     // [Lawrence, 2018] p 49
-    const gst_dec = hmsToDec(gst.hour, gst.min, gst.sec);
-    var lst_dec = gst_dec + longitude_deg / 15.0; // Convert degrees to hours
+    var lst_dec = gst.hours + longitude_deg / 15.0; // Convert degrees to hours
     if (lst_dec < 0) {
         lst_dec += 24;
     } else if (lst_dec >= 24) {
@@ -708,8 +665,7 @@ pub fn gstToLST(gst: AstroDate, longitude_deg: f64) AstroDate {
 pub fn lstToGST(lst: AstroDate, longitude_deg: f64) AstroDate {
     // Longitude: positive for East, negative for West
     // [Lawrence, 2018] p 50
-    const lst_dec = hmsToDec(lst.hour, lst.min, lst.sec);
-    var gst_dec = lst_dec - longitude_deg / 15.0; // Convert degrees to hours
+    var gst_dec = lst.hours - longitude_deg / 15.0; // Convert degrees to hours
     if (gst_dec < 0) {
         gst_dec += 24;
     } else if (gst_dec >= 24) {

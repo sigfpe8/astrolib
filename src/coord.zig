@@ -150,9 +150,9 @@ pub const HorCoord = struct {
     }
 
     /// Convert horizontal coordinates to equatorial coordinates in RA/Dec system.
-    pub fn toRaDec(self: HorCoord, lat: Latitude, lst: Angle) RaDec {
+    pub fn toRaDec(self: HorCoord, lat: Latitude, lst_hrs: f64) RaDec {
         const hadec = self.toHaDec(lat);
-        const ra = Angle.fromHours(@mod(lst.toHours().hrs - hadec.ha.toHours().hrs, 24.0));
+        const ra = Angle.fromHours(@mod(lst_hrs - hadec.ha.toHours().hrs, 24.0));
         return RaDec.init(
             ra,
             hadec.dec
@@ -247,10 +247,10 @@ pub const RaDec = struct {
     }
 
     /// Convert to horizontal coordinates
-    pub fn toHor(self: RaDec, lat: Latitude, lst: Angle) HorCoord {
+    pub fn toHor(self: RaDec, lat: Latitude, lst_hrs: f64) HorCoord {
         const ha_equa = HaDec.init(
             // Convert RA to HA: HA = LST - RA
-            Angle.fromHours(@mod(lst.toHours().hrs - self.ra.toHours().hrs, 24.0)),
+            Angle.fromHours(@mod(lst_hrs - self.ra.toHours().hrs, 24.0)),
             self.dec
         );
         // std.debug.print("DEBUG: HA = {d} deg\n", .{ha_equa.ha.toDegrees().deg});
@@ -452,7 +452,7 @@ pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
     }
     const set_lst = AstroDate.fromDateAndHours(date.year, date.month, date.day, set_hrs, tz);
     var set_time  = ad.lstToLCT(set_lst, loc.lon, date.tz);
-    if (set_time.toHours() < rise_time.toHours()) {
+    if (set_time.hours < rise_time.hours) {
         set_time = set_time.adNextDay();        
     }
 

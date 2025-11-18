@@ -95,16 +95,17 @@ test "RaDec.toHor" {
     const city = GeoCoord.init(Angle.fromDMS(DMS{.sign='-',.deg=22,.min=54,.sec=40}), 
                                          Angle.fromDMS(DMS{.sign='-',.deg=43,.min=12,.sec=20}));
     // Date: August 10, 1998, 23:10:00 LCT (UTC-3)
-    const lct: AstroDate = .{ .year = 1998, .month = 8, .day = 10, .hour = 23, .min = 10, .sec = 0, .tz = ast.tzBRT };
-    const lst = ast.lctToLST(lct, city.lon);
-    const lst_hrs = Angle.fromHMS(HMS{.sign='+', .hour=lst.hour, .min=lst.min, .sec=@floatFromInt(lst.sec)});
+    const lct = AstroDate.fromDateAndHMS(1998, 8, 10, 23, 10, 0, ast.tzBRT);
+    const lst_hrs = ast.lctToLST(lct, city.lon).hours;
 
     const hor = equa.toHor(city.lat, lst_hrs);
     const az_str = try hor.az.toDMSString(allocator);
     const alt_str = try hor.alt.toDMSString(allocator);
 
     // Mathematica gives: Azimuth 143°32'23.6", Altitude -42°09'21.6". ...oh well, close enough :)
-    try expect(std.mem.eql(u8, az_str, "143°33'46\""));
+    // std.debug.print("Az  = {s}\n", .{az_str});
+    // std.debug.print("Alt = {s}\n", .{alt_str});
+    try expect(std.mem.eql(u8, az_str, "143°33'45\""));
     try expect(std.mem.eql(u8, alt_str, "-42°11'16\""));
 
     allocator.free(az_str);
@@ -239,8 +240,7 @@ test "RiseAndSet" {
 
     const loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=38,.min=0,.sec=0}),   // New York City
                                       Angle.fromDMS(DMS{.sign='-',.deg=78,.min=0,.sec=0}));
-    const date= AstroDate{ .year = 2016, .month = 1, .day = 21,
-                                      .hour = 12, .min = 0, .sec = 0, .tz = ast.tzEST };
+    const date = AstroDate.fromDateAndHMS(2016, 1, 21, 12, 0, 0, ast.tzEST);
     const obj = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=5,.min=55,.sec=0}),  // Betelgeuse
                                   Angle.fromDMS(DMS{.sign='+',.deg=7,.min=30,.sec=0}));
 
@@ -254,7 +254,7 @@ test "RiseAndSet" {
     // std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_time_str, set_az_str});
     try expect(std.mem.eql(u8, rise_time_str, "2016-01-21 15:40:46 (-05:00)"));
     try expect(std.mem.eql(u8, rise_az_str, "80°27'56\""));
-    try expect(std.mem.eql(u8, set_time_str, "2016-01-22 04:29:51 (-05:00)"));
+    try expect(std.mem.eql(u8, set_time_str, "2016-01-22 04:29:50 (-05:00)"));
     try expect(std.mem.eql(u8, set_az_str, "279°32'04\""));
 
     allocator.free(rise_time_str);
@@ -265,7 +265,8 @@ test "RiseAndSet" {
 
 test "gstToUT" {
     // [Lawrence, 2018] p 48-49
-    const gstDate = AstroDate{ .year=2010, .month=2, .day=7, .hour=8, .min=41, .sec=53 };
+    const gstDate = AstroDate.fromDateAndHMS(2010, 2, 7, 8, 41, 53, .{});
     const utDate = ast.gstToUT(gstDate);
-    try expect(utDate.hour == 23 and utDate.min == 30 and utDate.sec == 0);
+    const hms = ast.hrsToHMS(utDate.hours);
+    try expect(hms.hour == 23 and hms.min == 30 and hms.sec == 0);
 }
