@@ -150,8 +150,8 @@ test "Chapter 5" {
     const az_str = obj_hor.az.toDMSString(allocator) catch unreachable;
     // std.debug.print("h={s}, A={s}\n", .{alt_str, az_str});
 
-    try expect(std.mem.eql(u8, alt_str, "-59°41'58\""));
-    try expect(std.mem.eql(u8, az_str, "224°15'27\""));
+    try expect(std.mem.eql(u8, alt_str, "-59°41′58″"));
+    try expect(std.mem.eql(u8, az_str, "224°15′27″"));
 
     allocator.free(alt_str);
     allocator.free(az_str);
@@ -175,7 +175,7 @@ test "Chapter 5" {
     // print("ra = {s}, dec = {s}\n", .{ra_str, dec_str});
 
     try expect(std.mem.eql(u8, ra_str, "16ʰ14ᵐ42ˢ"));
-    try expect(std.mem.eql(u8, dec_str, "25°57'41\""));
+    try expect(std.mem.eql(u8, dec_str, "25°57′41″"));
 
     allocator.free(ra_str);
     allocator.free(dec_str);

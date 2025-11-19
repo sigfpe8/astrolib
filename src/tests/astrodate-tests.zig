@@ -9,8 +9,8 @@ const Day = ast.Day;
 const Allocator = std.mem.Allocator;
 
 const expect = std.testing.expect;
+const allocator = std.testing.allocator;
 const print = std.debug.print;
-//const DebugAllocator = @import("heap.debug_allocator").DebugAllocator;
 
 test "dayOfWeek" {
     try expect(AstroDate.dayOfWeek(.{.year = 2000, .month = 1,  .day =  1}) == 6);
@@ -38,36 +38,24 @@ test "isLeapYear" {
 }
 
 test "toDateString" {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
     const date = AstroDate{.year = 2000, .month = 1, .day = 1, .hours = 12};
     const date_str = try date.toDateString(allocator);
+    defer allocator.free(date_str);
     try expect(std.mem.eql(u8, date_str, "2000-01-01"));
-    allocator.free(date_str);
 }
 
 test "toTimeString" {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
     const date = AstroDate.fromDateAndHMS(2000, 1, 1, 12, 30, 30, .{});
     const time_str = try date.toTimeString(allocator);
+    defer allocator.free(time_str);
     try expect(std.mem.eql(u8, time_str, "12:30:30"));
-    allocator.free(time_str);
 }
 
 test "toDateTimeString" {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
     const date = AstroDate.fromDateAndHMS(2025, 5, 23, 23, 59, 59, .{});
     const date_time_str = try date.toDateTimeString(allocator);
+    defer allocator.free(date_time_str);
     try expect(std.mem.eql(u8, date_time_str, "2025-05-23 23:59:59"));
-    allocator.free(date_time_str);
 }
 
 test "easterDate" {
@@ -268,12 +256,9 @@ test "previousDay" {
 }
 
 test "TimeZone" {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
     var tz = TimeZone.init(true, -5, -15); // UTC-5:15 with DST
     var tz_str = try tz.toString(allocator);
+    defer allocator.free(tz_str);
     try expect(std.mem.eql(u8, tz_str, "-05:15 DST"));
     allocator.free(tz_str);
     var offset_hours = tz.getOffsetHours();
@@ -303,8 +288,7 @@ test "TimeZone" {
     tz = TimeZone.init(false, 13, 30); // UTC+13:30
     tz_str = try tz.toString(allocator);
     try expect(std.mem.eql(u8, tz_str, "+13:30"));
-    allocator.free(tz_str);
+
     offset_hours = tz.getOffsetHours();
     try expect(std.math.approxEqAbs(f64, offset_hours, 13.5, 0.0001));
-
 }

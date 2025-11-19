@@ -200,7 +200,7 @@ pub const Angle = union(enum) {
     pub fn toDMSString(self: Angle, allocator: Allocator) ![]const u8 {
         const dms = self.toDMS();
         return try std.fmt.allocPrint(allocator,
-        "{s}{d}°{d:0>2}'{d:0>2.0}\"",
+        "{s}{d}°{d:0>2}′{d:0>2.0}″",
         .{if (dms.sign == '-') "-" else "", dms.deg, dms.min, dms.sec});
     }
 };
