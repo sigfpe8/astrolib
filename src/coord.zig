@@ -102,6 +102,7 @@ pub const GeoCoord = struct {
         };
     }
 
+    /// Format string: dd°mm′ss″ N/S, dd°mm′ss″ E/W
     pub fn toString(self: GeoCoord, allocator: Allocator) ![]const u8 {
         const lat_dms = self.lat.toDMS();
         const lon_dms = self.lon.toDMS();
@@ -109,7 +110,7 @@ pub const GeoCoord = struct {
         const lat_hemisphere = if (lat_dms.sign == '-') "S" else "N";
         const lon_hemisphere = if (lon_dms.sign == '-') "W" else "E";
 
-        return std.fmt.allocPrint(allocator, "{d}°{d:0>2}'{d:0>2.0}\" {s}, {d}°{d:0>2}'{d:0>2.0}\" {s}",
+        return std.fmt.allocPrint(allocator, "{d}°{d:0>2}′{d:0>2.0}″ {s}, {d}°{d:0>2}′{d:0>2.0}″ {s}",
             .{
                 lat_dms.deg, lat_dms.min, lat_dms.sec, lat_hemisphere,
                 lon_dms.deg, lon_dms.min, lon_dms.sec, lon_hemisphere,
@@ -140,8 +141,8 @@ pub const GeoCoord = struct {
 };
 
 pub const HorCoord = struct {
-    alt: Angle,       // Altitude [-90°, +90°]
-    az:  Angle,       // Azimuth [0°, 360°) from north to east
+    alt: Angle,       // Altitude [-90°, +90°]  (h)
+    az:  Angle,       // Azimuth [0°, 360°) from north to east (A)
 
     pub fn init(alt: Angle, az: Angle) HorCoord {
         return HorCoord{
@@ -189,12 +190,25 @@ pub const HorCoord = struct {
             dec
         );
     }
+
+    /// String format: h=dd°mm'ss", A=ddd°mm'ss"
+    pub fn toString(self: HorCoord, allocator: Allocator) ![]const u8 {
+        const az_str = try self.az.toDMSString(allocator);
+        defer allocator.free(az_str);
+        const alt_str = try self.alt.toDMSString(allocator);
+        defer allocator.free(alt_str);
+
+        return try std.fmt.allocPrint(allocator, "h={s}, A={s}", .{
+            alt_str,
+            az_str,
+        });
+    }
 };
 
 /// Equatorial coordinate using HA/Dec
 pub const HaDec = struct {
-    ha:  Angle,       // Hour Angle [0h, 24h)
-    dec: Angle,       // Declination [-90°, +90°]
+    ha:  Angle,       // Hour Angle [0h, 24h)     (H)
+    dec: Angle,       // Declination [-90°, +90°] (δ)
 
     pub fn init(ha: Angle, dec: Angle) HaDec {
         return HaDec{
@@ -218,14 +232,11 @@ pub const HaDec = struct {
 
         const cos_az = (sin_dec - sin_alt * sin_lat) / (cos_lat * alt.cos());
         var az = Angle.acos(cos_az).toDegrees();
-        // std.debug.print("DEBUG: cos_az = {d}, az = {d}\n", .{cos_az, az.deg});
 
         const sin_ha = ha.sin();
-        // std.debug.print("DEBUG: sin_ha = {d}\n", .{sin_ha});
         if (sin_ha > 0.0) {
             // az = 360 - az;
             az = Angle.fromDegrees(360.0 - az.deg);
-            // std.debug.print("DEBUG: corrected az = {d}\n", .{az.deg});
         }
 
         return HorCoord.init(
@@ -233,12 +244,25 @@ pub const HaDec = struct {
             az
         );
     }
+
+    /// String format: H=hhʰmmᵐssˢ, δ=dd°mm'ss"
+    pub fn toString(self: HaDec, allocator: Allocator) ![]const u8 {
+        const ha_str = try self.ha.toHMSString(allocator);
+        defer allocator.free(ha_str);
+        const dec_str = try self.dec.toDMSString(allocator);
+        defer allocator.free(dec_str);
+
+        return try std.fmt.allocPrint(allocator, "H={s}, δ={s}", .{
+            ha_str,
+            dec_str,
+        });
+    }
 };
 
 /// Equatorial coordinate using RA/Dec
 pub const RaDec = struct {
-    ra:  Angle,       // Right Ascension [0h, 24h)
-    dec: Angle,       // Declination [-90°, +90°]
+    ra:  Angle,       // Right Ascension [0h, 24h)  (ɑ)
+    dec: Angle,       // Declination [-90°, +90°]   (δ)
 
     pub fn init(ra: Angle, dec: Angle) RaDec {
         return RaDec{
@@ -254,7 +278,6 @@ pub const RaDec = struct {
             Angle.fromHours(@mod(lst_hrs - self.ra.toHours().hrs, 24.0)),
             self.dec
         );
-        // std.debug.print("DEBUG: HA = {d} deg\n", .{ha_equa.ha.toDegrees().deg});
         return ha_equa.toHor(lat);
     }
 
@@ -333,11 +356,24 @@ pub const RaDec = struct {
             Angle.fromDegrees(self.dec.toDegrees().deg + delta_dec / 3600.0)
         );
     }
+
+    /// String format: α=dd°mm'ss", δ=dd°mm'ss"
+    pub fn toString(self: RaDec, allocator: Allocator) ![]const u8 {
+        const ra_str = try self.ra.toHMSString(allocator);
+        defer allocator.free(ra_str);
+        const dec_str = try self.dec.toDMSString(allocator);
+        defer allocator.free(dec_str);
+
+        return try std.fmt.allocPrint(allocator, "α={s}, δ={s}", .{
+            ra_str,
+            dec_str,
+        });
+    }
 };
 
 pub const EclipticCoord = struct {
-    lat: Latitude,      // Ecliptic Latitude [-90°, +90°]
-    lon: Longitude,     // Ecliptic Longitude [0°, 360°)
+    lat: Latitude,      // Ecliptic Latitude [-90°, +90°]  (β)
+    lon: Longitude,     // Ecliptic Longitude [0°, 360°)   (λ)
 
     pub fn init(lat: Angle, lon: Angle) EclipticCoord {
         return EclipticCoord{
@@ -373,11 +409,24 @@ pub const EclipticCoord = struct {
             dec
         );
     }
+
+    /// String format: β=dd°mm'ss", λ=dd°mm'ss"
+    pub fn toString(self: EclipticCoord, allocator: Allocator) ![]const u8 {
+        const lat_str = try self.lat.toHMSString(allocator);
+        defer allocator.free(lat_str);
+        const lon_str = try self.lon.toDMSString(allocator);
+        defer allocator.free(lon_str);
+
+        return try std.fmt.allocPrint(allocator, "β={s}, λ={s}", .{
+            lat_str,
+            lon_str,
+        });
+    }
 };
 
 pub const GalacticCoord = struct {
-    lat: Latitude,      // Galactic Latitude [-90°, +90°]
-    lon: Longitude,     // Galactic Longitude [0°, 360°)
+    lat: Latitude,      // Galactic Latitude [-90°, +90°]  (b)
+    lon: Longitude,     // Galactic Longitude [0°, 360°).  (l)
 
     
     pub fn init(lat: Angle, lon: Angle) GalacticCoord {
@@ -418,6 +467,19 @@ pub const GalacticCoord = struct {
             ra,
             dec
         );
+    }
+
+    /// String format: b=dd°mm'ss", l=dd°mm'ss"
+    pub fn toString(self: GalacticCoord, allocator: Allocator) ![]const u8 {
+        const lat_str = try self.lat.toHMSString(allocator);
+        defer allocator.free(lat_str);
+        const lon_str = try self.lon.toDMSString(allocator);
+        defer allocator.free(lon_str);
+
+        return try std.fmt.allocPrint(allocator, "b={s}, l={s}", .{
+            lat_str,
+            lon_str,
+        });
     }
 };
 

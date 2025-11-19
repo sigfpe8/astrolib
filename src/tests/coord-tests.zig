@@ -57,6 +57,15 @@ test "HorCoord.toHaDec" {
     try expect(std.mem.eql(u8, dec_str, "8°05′03″"));
 }
 
+test "HorCoord.toString" {
+    const hor = HorCoord.init(Angle.fromDMS(.{.sign='-', .deg=45, .min=46, .sec=47}),
+                                        Angle.fromDegrees(285));
+    const hor_str = try hor.toString(allocator);
+    defer allocator.free(hor_str);
+
+    try expect(std.mem.eql(u8, hor_str, "h=-45°46′47″, A=285°00′00″"));
+}
+
 test "HaDec.toHor" {
     const equa = HaDec.init(Angle.fromHMS(HMS{.sign='+', .hour=16,.min=29,.sec=45}),
                                   Angle.fromDMS(DMS{.sign='-',  .deg= 0,.min=30,.sec=30.0}));
@@ -71,6 +80,15 @@ test "HaDec.toHor" {
 
     try expect(std.mem.eql(u8, az_str, "80°31′31″"));
     try expect(std.mem.eql(u8, alt_str, "-20°34′40″"));
+}
+
+test "HaDec.toString" {
+    const equ = HaDec.init(Angle.fromHMS(.{.sign='+', .hour=21, .min=22, .sec=23}),
+                                        Angle.fromDegrees(-43));
+    const equ_str = try equ.toString(allocator);
+    defer allocator.free(equ_str);
+
+    try expect(std.mem.eql(u8, equ_str, "H=21ʰ22ᵐ23ˢ, δ=-43°00′00″"));
 }
 
 test "RaDec.toHor" {
@@ -147,6 +165,14 @@ test "RaDec.adjustPrecession" {
     try expect(std.mem.eql(u8, dec_str, "27°07′41″"));
 }
 
+test "RaDec.toString" {
+    const equ = RaDec.init(Angle.fromDegrees(180), Angle.fromDegrees(-40));
+    const equ_str = try equ.toString(allocator);
+    defer allocator.free(equ_str);
+
+    try expect(std.mem.eql(u8, equ_str, "α=12ʰ00ᵐ00ˢ, δ=-40°00′00″"));
+}
+
 test "EclipticCoord.toRaDec" {
     const ecl = EclipticCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=1,.min=12,.sec=0}), 
                                                   Angle.fromDMS(DMS{.sign='+',.deg=184,.min=36,.sec=0}));
@@ -162,6 +188,14 @@ test "EclipticCoord.toRaDec" {
     // std.debug.print("Dec: {s}\n", .{dec_str});
     try expect(std.mem.eql(u8, ra_str, "12ʰ18ᵐ47ˢ"));
     try expect(std.mem.eql(u8, dec_str, "-0°43′36″"));
+}
+
+test "EclipticCoord.toString" {
+    const ecl = EclipticCoord.init(Angle.fromDegrees(180), Angle.fromDegrees(-40));
+    const ecl_str = try ecl.toString(allocator);
+    defer allocator.free(ecl_str);
+
+    try expect(std.mem.eql(u8, ecl_str, "β=12ʰ00ᵐ00ˢ, λ=-40°00′00″"));
 }
 
 test "GalacticCoord.toRaDec" {
@@ -191,6 +225,14 @@ test "GalacticCoord.toRaDec" {
     // std.debug.print("Dec: {s}\n", .{dec_str});
     try expect(std.mem.eql(u8, ra_str, "10ʰ15ᵐ43ˢ"));
     try expect(std.mem.eql(u8, dec_str, "40°33′35″"));
+}
+
+test "GalacticCoord.toString" {
+    const gal = GalacticCoord.init(Angle.fromDegrees(195), Angle.fromDegrees(35));
+    const gal_str = try gal.toString(allocator);
+    defer allocator.free(gal_str);
+
+    try expect(std.mem.eql(u8, gal_str, "b=13ʰ00ᵐ00ˢ, l=35°00′00″"));
 }
 
 test "RiseAndSet" {
