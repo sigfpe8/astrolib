@@ -167,7 +167,7 @@ test "Chapter 5" {
     date_lst = ast.lctToLST(date, loc.lon);
     lst_hrs = date_lst.hours;
 
-    obj_hor = HorCoord.init(Angle.fromDegrees(90), Angle.fromDegrees(45));
+    obj_hor = HorCoord.init(Angle.fromDegrees(45), Angle.fromDegrees(90));
     obj_equ = obj_hor.toRaDec(loc.lat, lst_hrs);
 
     const ra_str = try obj_equ.ra.toHMSString(allocator);

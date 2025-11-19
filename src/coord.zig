@@ -36,10 +36,9 @@ pub const Epoch = struct {
     gra0: Angle,        // RA of galactic north pole
     gdec0: Angle,       // Dec of galactic north pole
     glon0: Angle,       // Galactic longitude of ascending node (N0)
-
-    ecc: f64,           // Eccentricity of the Earth-Sun orbit (e)
-    sun_elon: Angle,    // Sun's ecliptic longitude at the epoch (εg)
-    sun_elong: Angle,   // Sun's ecliptic longitude at perigee at the epoch (ϖg)
+    ecc: f64,           // Mean eccentricity of the Earth-Sun orbit (e)
+    sun_elon: Angle,    // Sun's ecliptic mean longitude at the epoch (εg)
+    sun_elong: Angle,   // Sun's ecliptic mean longitude at perigee at the epoch (ϖg)
 };
 
 pub var epoch= &epochJ2000;    // Default = J2000
@@ -141,13 +140,13 @@ pub const GeoCoord = struct {
 };
 
 pub const HorCoord = struct {
-    az:  Angle,       // Azimuth [0°, 360°) from north to east
     alt: Angle,       // Altitude [-90°, +90°]
+    az:  Angle,       // Azimuth [0°, 360°) from north to east
 
-    pub fn init(az: Angle, alt: Angle) HorCoord {
+    pub fn init(alt: Angle, az: Angle) HorCoord {
         return HorCoord{
-            .az  = az,
             .alt = alt,
+            .az  = az,
         };
     }
 
@@ -230,8 +229,8 @@ pub const HaDec = struct {
         }
 
         return HorCoord.init(
-            az,
-            alt
+            alt,
+            az
         );
     }
 };

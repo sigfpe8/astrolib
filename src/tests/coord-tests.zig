@@ -49,7 +49,7 @@ test "HorCoord.toHaDec" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const hor = HorCoord.init(Angle.fromDegrees(115.0), Angle.fromDegrees(40.0));
+    const hor = HorCoord.init(Angle.fromDegrees(40.0), Angle.fromDegrees(115.0));
     const lat = Angle.fromDegrees(38.0);
 
     const equa = hor.toHaDec(lat);
