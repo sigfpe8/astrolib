@@ -54,14 +54,19 @@ pub const GeoCoord = struct {
 };
 
 /// World capital information.
-const Capital = struct {
+const City = struct {
     city: []const u8,
     country: []const u8,
     coord: GeoCoord,
 };
 
+const rio: City = .{.city="Rio de Janeiro", .country="Brazil", .coord=.{
+                        .lat = Angle.fromDMS(.{.sign='-', .deg=22, .min=54, .sec=40}),
+                        .lon = Angle.fromDMS(.{.sign='-', .deg=43, .min=12, .sec=20})}};
+
+
 /// Sample list of major world capitals.
-const capitals = [_]Capital{
+const capitals = [_]City{
     .{ .city = "Washington D.C.", .country = "United States", .coord = .{
         .lat = Angle.fromDegrees(38.8951),
         .lon = Angle.fromDegrees(-77.0364),
@@ -118,7 +123,7 @@ const capitals = [_]Capital{
         .lat = Angle.fromDegrees(45.4215),
         .lon = Angle.fromDegrees(-75.6993),
     }},
-    .{ .city = "Brasília", .country = "Brazil", .coord = .{
+    .{ .city = "Brasilia", .country = "Brazil", .coord = .{
         .lat = Angle.fromDegrees(-15.7939),
         .lon = Angle.fromDegrees(-47.8828),
     }},

@@ -20,7 +20,8 @@ const HorCoord = crd.HorCoord;
 const EclipticCoord = crd.EclipticCoord;
 const GalacticCoord = crd.GalacticCoord;
 const HaDec = crd.HaDec;
-const Epoch = crd.Epoch;
+const epoch = crd.epoch;
+const setStdEpoch = crd.setStdEpoch;
 
 const expect = std.testing.expect;
 
@@ -141,7 +142,7 @@ test "RaDec.toGalactic" {
     const equa = RaDec.init(Angle.fromHMS(HMS{.sign='+', .hour=10,.min=12,.sec=43.0}),
                                   Angle.fromDMS(DMS{.sign='+', .deg=40,.min=48,.sec=33.0}));
 
-    Epoch.set(.B1950);
+    setStdEpoch(.B1950);
     const gal = equa.toGalactic();
     const lat_str = try gal.lat.toDMSString(allocator);
     const lon_str = try gal.lon.toDMSString(allocator);
@@ -185,7 +186,7 @@ test "EclipticCoord.toRaDec" {
     const ecl = EclipticCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=1,.min=12,.sec=0}), 
                                                   Angle.fromDMS(DMS{.sign='+',.deg=184,.min=36,.sec=0}));
 
-    Epoch.set(.J2000);
+    setStdEpoch(.J2000);
     const equa = ecl.toRaDec();
     const ra_str = try equa.ra.toHMSString(allocator);
     const dec_str = try equa.dec.toDMSString(allocator);
@@ -206,7 +207,7 @@ test "GalacticCoord.toRaDec" {
 
     const gal = GalacticCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=55,.min=20,.sec=0}), 
                                                   Angle.fromDegrees(180.0));
-    Epoch.set(.B1950);
+    setStdEpoch(.B1950);
     var equa = gal.toRaDec();
     var ra_str = try equa.ra.toHMSString(allocator);
     var dec_str = try equa.dec.toDMSString(allocator);
@@ -219,7 +220,7 @@ test "GalacticCoord.toRaDec" {
     allocator.free(ra_str);
     allocator.free(dec_str);
 
-    Epoch.set(.J2000);
+    setStdEpoch(.J2000);
     equa = gal.toRaDec();
     ra_str = try equa.ra.toHMSString(allocator);
     dec_str = try equa.dec.toDMSString(allocator);

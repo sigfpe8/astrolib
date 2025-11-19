@@ -21,64 +21,66 @@ pub const CoordError = error{
     ObjNeverRises,
 };
 
-pub const Epoch = enum {
+pub const EpochTag = enum {
     B1950,
     J2000,
-    Custom,
-
-    pub fn set(epoch: Epoch) void {
-        switch (epoch) {
-            .B1950 => {
-                epch = .B1950;
-                eps = eps0_B1950;
-                sin_eps = sin_eps0_B1950;
-                cos_eps = cos_eps0_B1950;
-                gra0 = gra0_B1950;
-                gdec0 = gdec0_B1950;
-                glon0 = glon0_B1950;
-            },
-            .J2000 => {
-                epch = .J2000;
-                eps = eps0_J2000;
-                sin_eps = sin_eps0_J2000;
-                cos_eps = cos_eps0_J2000;
-                gra0 = gra0_J2000;
-                gdec0 = gdec0_J2000;
-                glon0 = glon0_J2000;
-            },
-            .Custom => {
-                // Do nothing; user must set parameters manually
-            },
-        }
-    }
 };
 
-// Epoch B1950.0 constants
-const eps0_B1950 = Angle.fromDegrees(23.45229444); // Mean obliquity (ε0) at 1950.0
-const sin_eps0_B1950: f64 = eps0_B1950.sin();
-const cos_eps0_B1950: f64 = eps0_B1950.cos();
-// Galactic north pole and zero longitude
-const gra0_B1950  = Angle.fromDegrees(192.25);
-const gdec0_B1950 = Angle.fromDegrees(27.4);
-const glon0_B1950 = Angle.fromDegrees(33);
+pub const Epoch = struct {
+    name: EpochTag,    // Epoch designator
+    year: usize,        // Year of epoch (e.g. 2000)
+    jd: f64,            // JD of epoch
+    obl: Angle,         // Mean obliquity of the ecliptic (ε0)
+    sin_obl: f64,       // Sine of obliquity (sin ε0)
+    cos_obl: f64,       // Cosine of obliquity (cos ε0)
+    gra0: Angle,        // RA of galactic north pole
+    gdec0: Angle,       // Dec of galactic north pole
+    glon0: Angle,       // Galactic longitude of ascending node (N0)
 
-// Epoch J2000.0 constants
-const eps0_J2000  = Angle.fromDegrees(23.43929111); // Mean obliquity (ε0) at J2000.0
-const sin_eps0_J2000: f64 = eps0_J2000.sin();
-const cos_eps0_J2000: f64 = eps0_J2000.cos();
-// Galactic north pole and zero longitude
-const gra0_J2000  = Angle.fromHMS(HMS{.sign='+', .hour=12, .min=51, .sec=26.36});
-const gdec0_J2000 = Angle.fromDMS(DMS{.sign='+', .deg=27, .min=7, .sec=40.90});
-const glon0_J2000 = Angle.fromDegrees(32.9319);
+    ecc: f64,           // Eccentricity of the Earth-Sun orbit (e)
+    sun_elon: Angle,    // Sun's ecliptic longitude at the epoch (εg)
+    sun_elong: Angle,   // Sun's ecliptic longitude at perigee at the epoch (ϖg)
+};
 
-// Current settings (default to J2000)
-var epch = Epoch.J2000;         // Current epoch
-var eps = eps0_J2000;           // Current obliquity of the ecliptic ()
-var sin_eps: f64 = sin_eps0_J2000;     // Sine of obliquity (sin ε)
-var cos_eps: f64 = cos_eps0_J2000;     // Cosine of obliquity (cos ε)
-var gra0 = gra0_J2000;          // RA of galactic north pole
-var gdec0 = gdec0_J2000;        // Dec of galactic north pole
-var glon0 = glon0_J2000;        // Galactic longitude of ascending node (N0)
+pub var epoch= &epochJ2000;    // Default = J2000
+
+const epochJ2000: Epoch = .{
+    .name = .J2000,
+    .year = 2000,
+    .jd = 2_451_545.0,       // January 1, 2000, 12:00:00 UT
+    .obl = Angle.fromDegrees(23.43929111),
+    .sin_obl = Angle.fromDegrees(23.43929111).sin(),
+    .cos_obl = Angle.fromDegrees(23.43929111).cos(),
+    .gra0  = Angle.fromHMS(HMS{.sign='+', .hour=12, .min=51, .sec=26.36}),
+    .gdec0 = Angle.fromDMS(DMS{.sign='+', .deg=27, .min=7, .sec=40.90}),
+    .glon0 = Angle.fromDegrees(32.9319),
+    .ecc = 0.016708,
+    .sun_elon = Angle.fromDegrees(280.466_069),
+    .sun_elong = Angle.fromDegrees(282.938_346),
+};
+
+const epochB1950: Epoch = .{
+    .name = .B1950,
+    .year = 1950,
+    .jd = 2_433_282.423_459_05,       // Somewhat before midnight December 31, 1949 GMT...
+    .obl = Angle.fromDegrees(23.45229444),
+    .sin_obl = Angle.fromDegrees(23.45229444).sin(),
+    .cos_obl = Angle.fromDegrees(23.45229444).cos(),
+    .gra0  = Angle.fromDegrees(192.25),
+    .gdec0 = Angle.fromDegrees(27.4),
+    .glon0 = Angle.fromDegrees(33),
+    .ecc = 0.01675,
+    // FIX: the two values below are from J2000
+    .sun_elon = Angle.fromDegrees(280.466_069),
+    .sun_elong = Angle.fromDegrees(282.938_346),
+};
+
+pub fn setStdEpoch(epc: EpochTag) void {
+    switch (epc) {
+        .B1950 => { epoch = &epochB1950; },
+        .J2000 => { epoch = &epochJ2000; },
+    }
+}
 
 pub const RiseAndSet = struct {
     rise_time: AstroDate,   // Rising time in LCT
@@ -269,10 +271,10 @@ pub const RaDec = struct {
         const sin_ra = self.ra.sin();
         const cos_ra = self.ra.cos();
 
-        const sin_lat = sin_dec * cos_eps - cos_dec * sin_eps * sin_ra;
+        const sin_lat = sin_dec * epoch.cos_obl - cos_dec * epoch.sin_obl * sin_ra;
         const lat = Angle.asin(sin_lat);
 
-        const y = sin_ra * cos_eps + tan_dec * sin_eps;
+        const y = sin_ra * epoch.cos_obl + tan_dec * epoch.sin_obl;
         const x = cos_ra;
 
         var lon = Angle.atan2(y, x).toDegrees();
@@ -294,10 +296,10 @@ pub const RaDec = struct {
         const sin_dec = self.dec.sin();
         const cos_dec = self.dec.cos();
 
-        const sin_dec0 = gdec0.sin();
-        const cos_dec0 = gdec0.cos();
+        const sin_dec0 = epoch.gdec0.sin();
+        const cos_dec0 = epoch.gdec0.cos();
 
-        const ra = Angle.fromHours(self.ra.toHours().hrs - gra0.toHours().hrs);
+        const ra = Angle.fromHours(self.ra.toHours().hrs - epoch.gra0.toHours().hrs);
         const sin_ra = ra.sin();
         const cos_ra = ra.cos();
 
@@ -307,7 +309,7 @@ pub const RaDec = struct {
         const x = cos_dec * sin_ra * cos_dec0;
 
         var lon = Angle.atan2(y, x).toDegrees();
-        lon = Angle.fromDegrees(@mod(lon.deg + glon0.toDegrees().deg, 360.0));
+        lon = Angle.fromDegrees(@mod(lon.deg + epoch.glon0.toDegrees().deg, 360.0));
 
         return GalacticCoord.init(
             lat,
@@ -356,10 +358,10 @@ pub const EclipticCoord = struct {
         const sin_lon = self.lon.sin();
         const cos_lon = self.lon.cos();
 
-        const sin_dec = sin_lat * cos_eps + cos_lat * sin_eps * sin_lon;
+        const sin_dec = sin_lat * epoch.cos_obl + cos_lat * epoch.sin_obl * sin_lon;
         const dec = Angle.asin(sin_dec);
 
-        const y = sin_lon * cos_eps - tan_lat * sin_eps;
+        const y = sin_lon * epoch.cos_obl - tan_lat * epoch.sin_obl;
         const x = cos_lon;
 
         var ra = Angle.atan2(y, x).toHours();
@@ -390,12 +392,12 @@ pub const GalacticCoord = struct {
         // Formulas from "Celestial Calculations" by J.L Lawrence, Chapter 4
         //   (4.9.1) sin δ = cos b cos δ₀ * sin(l - l₀) + sin b sin δ₀
         //   (4.9.2) ɑ = atan2(cos b * cos(l - l₀), sin b * cos δ₀ - cos b * sin δ₀ * sin(l - l₀)) + ɑ₀
-        const lon = Angle.fromDegrees(self.lon.toDegrees().deg - glon0.toDegrees().deg); // l - l₀
+        const lon = Angle.fromDegrees(self.lon.toDegrees().deg - epoch.glon0.toDegrees().deg); // l - l₀
         const sin_lat = self.lat.sin();
         const cos_lat = self.lat.cos();
 
-        const sin_dec0 = gdec0.sin();
-        const cos_dec0 = gdec0.cos();
+        const sin_dec0 = epoch.gdec0.sin();
+        const cos_dec0 = epoch.gdec0.cos();
 
         const sin_lon = lon.sin();
         const cos_lon = lon.cos();
@@ -411,7 +413,7 @@ pub const GalacticCoord = struct {
             ra = Angle.fromHours(ra.hrs + 24.0);
         }
 
-        ra = Angle.fromHours(@mod(ra.toHours().hrs + gra0.toHours().hrs, 24.0));
+        ra = Angle.fromHours(@mod(ra.toHours().hrs + epoch.gra0.toHours().hrs, 24.0));
 
         return RaDec.init(
             ra,
