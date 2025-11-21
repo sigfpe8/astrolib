@@ -37,10 +37,6 @@ pub const Angle = union(enum) {
         return Angle{ .deg = degrees };
     }
 
-    // pub fn fromDMS(deg: i64, min: i64, sec: f64) Angle {
-    //     return Angle{ .deg = @as(f64, deg) + @as(f64, min) * min_to_deg + sec * sec_to_deg };
-    // }
-
     pub fn fromDMS(dms: DMS) Angle {
         var degrees: f64 = @as(f64, @floatFromInt(dms.deg)) + @as(f64, @floatFromInt(dms.min)) * min_to_deg + dms.sec * sec_to_deg;
         if (dms.sign == '-') {
@@ -65,7 +61,7 @@ pub const Angle = union(enum) {
         return Angle{ .hrs = hours };
     }
 
-    pub fn toDegrees(self: Angle) Angle {
+    pub inline fn toDegrees(self: Angle) Angle {
         switch (self) {
             .deg => return self,
             .rad => return Angle.fromDegrees(self.rad * rad_to_deg),
@@ -81,7 +77,7 @@ pub const Angle = union(enum) {
         }
     }
     
-    pub fn toHours(self: Angle) Angle {
+    pub inline fn toHours(self: Angle) Angle {
         switch (self) {
             .deg => return Angle.fromHours(self.deg * deg_to_hrs),
             .rad => return Angle.fromHours(self.rad * rad_to_hrs),

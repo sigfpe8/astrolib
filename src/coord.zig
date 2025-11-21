@@ -27,8 +27,8 @@ pub const EpochTag = enum {
 };
 
 pub const Epoch = struct {
-    name: EpochTag,    // Epoch designator
-    year: usize,        // Year of epoch (e.g. 2000)
+    name: EpochTag,     // Epoch designator
+    year: u32,          // Year of epoch (e.g. 2000)
     jd: f64,            // JD of epoch
     obl: Angle,         // Mean obliquity of the ecliptic (ε0)
     sin_obl: f64,       // Sine of obliquity (sin ε0)
@@ -81,11 +81,24 @@ pub fn setStdEpoch(epc: EpochTag) void {
     }
 }
 
+/// Rise and set local time and azimuth of a celestial object
 pub const RiseAndSet = struct {
-    rise_time: AstroDate,   // Rising time in LCT
-    rise_az:   Angle,       // Azimuth at rising time [0°, 360°)
-    set_time:  AstroDate,   // Set time in LCT
-    set_az:    Angle,       // Azimuth at set time [0°, 360°)
+    rise_lct:   AstroDate,   // Rising time in LCT
+    rise_az:    Angle,       // Azimuth at rising time [0°, 360°)
+    set_lct:    AstroDate,   // Set time in LCT
+    set_az:     Angle,       // Azimuth at set time [0°, 360°)
+};
+
+/// Rise and set LCT of a celestial object
+pub const RiseAndSetLCT = struct {
+    rise_lct:   AstroDate,  // Local rise time
+    set_lct:    AstroDate,  // Local set time
+};
+
+/// Rise and set LST of a celestial object
+pub const RiseAndSetLST = struct {
+    rise_lst: f64,   // Rising time in LST hours
+    set_lst:  f64,   // Set time in LST hours
 };
 
 pub const Latitude  = Angle;    // [ -90°, +90°]
@@ -483,6 +496,7 @@ pub const GalacticCoord = struct {
     }
 };
 
+/// Return the rise and set LCT and azimuth of a celestial object
 pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
     const tan_lat = loc.lat.tan();
     const cos_lat = loc.lat.cos();
@@ -498,31 +512,64 @@ pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
 
     const h2 = Angle.acos(-h1).toHours();
 
-    // Rise azimuth and time of object
+    // Rise tima and azimuth of object
     const rise_az = Angle.acos(ar);
     var rise_hrs = 24.0 + obj.ra.toHours().hrs - h2.hrs;
     if (rise_hrs > 24) {
         rise_hrs -= 24;
     }
     const rise_lst = AstroDate.fromDateAndHours(date.year, date.month, date.day, rise_hrs, tz);
-    const rise_time = ad.lstToLCT(rise_lst, loc.lon, date.tz);
+    const rise_lct = ad.lstToLCT(rise_lst, loc.lon, date.tz);
 
-    // Set azimuth and time of object
+    // Set time and azimuth of object
     const set_az  = Angle.fromDegrees(360.0 - rise_az.toDegrees().deg);
     var set_hrs = obj.ra.toHours().hrs + h2.hrs;
     if (set_hrs > 24) {
         set_hrs -= 24;
     }
     const set_lst = AstroDate.fromDateAndHours(date.year, date.month, date.day, set_hrs, tz);
-    var set_time  = ad.lstToLCT(set_lst, loc.lon, date.tz);
-    if (set_time.hours < rise_time.hours) {
-        set_time = set_time.adNextDay();        
+    var set_lct  = ad.lstToLCT(set_lst, loc.lon, date.tz);
+    if (set_lct.hours < rise_lct.hours) {
+        set_lct = set_lct.adNextDay();        
     }
 
     return RiseAndSet{
-        .rise_time = rise_time,
+        .rise_lct = rise_lct,
         .rise_az   = rise_az,
-        .set_time  = set_time,
+        .set_lct  = set_lct,
         .set_az    = set_az,
+    };
+}
+
+/// Similar to riseAndSet() but return only the LST hours
+pub fn riseAndSetLST(loc: GeoCoord, obj: RaDec) !RiseAndSetLST {
+    const tan_lat = loc.lat.tan();
+    const cos_lat = loc.lat.cos();
+    const tan_dec = obj.dec.tan();
+    const sin_dec = obj.dec.sin();
+    const ar = sin_dec / cos_lat;
+    const h1 = tan_lat * tan_dec;
+
+    if (ar < -1.0 or ar > 1.0 or h1 < -1.0 or h1 > 1.0) {
+        return CoordError.ObjNeverRises;
+    }
+
+    const h2 = Angle.acos(-h1).toHours();
+
+    // Rise time of object
+    var rise_lst = 24.0 + obj.ra.toHours().hrs - h2.hrs;
+    if (rise_lst > 24) {
+        rise_lst -= 24;
+    }
+
+    // Set time of object
+    var set_lst = obj.ra.toHours().hrs + h2.hrs;
+    if (set_lst > 24) {
+        set_lst -= 24;
+    }
+
+    return RiseAndSetLST{
+        .rise_lst = rise_lst,
+        .set_lst  = set_lst,
     };
 }

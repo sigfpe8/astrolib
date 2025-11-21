@@ -207,8 +207,8 @@ test "Chapter 5" {
         return err;
     };
 
-    const rise_str = try ras.rise_time.toTimeString(allocator);
-    const set_str = try ras.set_time.toTimeString(allocator);
+    const rise_str = try ras.rise_lct.toTimeString(allocator);
+    const set_str = try ras.set_lct.toTimeString(allocator);
 
     // print("LCTr = {s}\n", .{rise_str});
     // print("LCTs = {s}\n", .{set_str});

@@ -243,20 +243,20 @@ test "RiseAndSet" {
                                   Angle.fromDMS(DMS{.sign='+',.deg=7,.min=30,.sec=0}));
 
     const rs = try crd.riseAndSet(loc, date, obj);
-    const rise_time_str = try rs.rise_time.toString(allocator);
-    defer allocator.free(rise_time_str);
-    const set_time_str = try rs.set_time.toString(allocator);
-    defer allocator.free(set_time_str);
+    const rise_lct_str = try rs.rise_lct.toString(allocator);
+    defer allocator.free(rise_lct_str);
+    const set_lct_str = try rs.set_lct.toString(allocator);
+    defer allocator.free(set_lct_str);
     const rise_az_str = try rs.rise_az.toDMSString(allocator);
     defer allocator.free(rise_az_str);
     const set_az_str = try rs.set_az.toDMSString(allocator);
     defer allocator.free(set_az_str);
 
-    // std.debug.print("Rise Time: {s}, Azimuth: {s}\n", .{rise_time_str, rise_az_str});
-    // std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_time_str, set_az_str});
-    try expect(std.mem.eql(u8, rise_time_str, "2016-01-21 15:40:46 (-05:00)"));
+    // std.debug.print("Rise Time: {s}, Azimuth: {s}\n", .{rise_lct_str, rise_az_str});
+    // std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_lct_str, set_az_str});
+    try expect(std.mem.eql(u8, rise_lct_str, "2016-01-21 15:40:46 (-05:00)"));
     try expect(std.mem.eql(u8, rise_az_str, "80°27′56″"));
-    try expect(std.mem.eql(u8, set_time_str, "2016-01-22 04:29:50 (-05:00)"));
+    try expect(std.mem.eql(u8, set_lct_str, "2016-01-22 04:29:50 (-05:00)"));
     try expect(std.mem.eql(u8, set_az_str, "279°32′04″"));
 }
 

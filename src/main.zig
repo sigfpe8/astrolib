@@ -42,16 +42,16 @@ pub fn main() !void {
                                   Angle.fromDMS(DMS{.sign='+',.deg=7,.min=30,.sec=0}));
 
     const rs = try crd.riseAndSet(loc, date, obj);
-    const rise_time_str = try rs.rise_time.toString(allocator);
-    const set_time_str = try rs.set_time.toString(allocator);
+    const rise_lct_str = try rs.rise_lct.toString(allocator);
+    const set_lct_str = try rs.set_lct.toString(allocator);
     const rise_az_str = try rs.rise_az.toDMSString(allocator);
     const set_az_str = try rs.set_az.toDMSString(allocator);
 
-    std.debug.print("Rise Time: {s}, Azimuth: {s}\n", .{rise_time_str, rise_az_str});
-    std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_time_str, set_az_str});
+    std.debug.print("Rise Time: {s}, Azimuth: {s}\n", .{rise_lct_str, rise_az_str});
+    std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_lct_str, set_az_str});
 
-    allocator.free(rise_time_str);
-    allocator.free(set_time_str);
+    allocator.free(rise_lct_str);
+    allocator.free(set_lct_str);
     allocator.free(rise_az_str);
     allocator.free(set_az_str);
 }
