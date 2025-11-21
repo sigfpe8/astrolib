@@ -200,8 +200,10 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     // Hour angle
     const cos_w0 = (@sin(-0.833 * pi / 180) - @sin(loc.lat.toRadians().rad) * sin_dec) /
                    (@cos(loc.lat.toRadians().rad) * cos_dec);
-    const w0 = std.math.acos(cos_w0) * 180 / pi;
-    const w = w0 / 360.0;
+    // const w0 = std.math.acos(cos_w0) * 180 / pi;
+    // const w = w0 / 360.0;
+    const w = std.math.acos(cos_w0) / two_pi;
+
     const lctr = AstroDate.fromJD(Jt - w);
     const lcts = AstroDate.fromJD(Jt + w);
 
