@@ -110,38 +110,6 @@ pub fn sunEclipticCoord(date: AstroDate) EclipticCoord {
     return EclipticCoord.init(Angle.fromDegrees(0), lon);
 }
 
-const allocator = std.testing.allocator;
-
-test "sunRiseAndSet" {
-    const loc = GeoCoord.init(Angle.fromDegrees(38),   // New York City
-                                        Angle.fromDegrees(-78));
-
-    const date = AstroDate.fromDateAndHours(2015,2,5,0,ast.tzEST);
-    const ras = try sunRiseAndSet(loc, date);
-
-    const strr = try ras.rise_lct.toString(allocator);
-    defer allocator.free(strr);
-
-    const strs = try ras.set_lct.toString(allocator);
-    defer allocator.free(strs);
-
-    std.debug.print("LCTr = {s}\n", .{strr});
-    std.debug.print("LCTs = {s}\n", .{strs});
-
-    // ---------
-
-    const ras2 = try sunRiseAndSet2(loc, date);
-
-    const strr2 = try ras2.rise_lct.toString(allocator);
-    defer allocator.free(strr2);
-
-    const strs2 = try ras2.set_lct.toString(allocator);
-    defer allocator.free(strs2);
-
-    std.debug.print("LCTr = {s}\n", .{strr2});
-    std.debug.print("LCTs = {s}\n", .{strs2});
-}
-
 /// Return approximate local time for sunrise and sunset (Lawrence, 2018)
 pub fn sunRiseAndSet(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     const ec1 = sunEclipticCoord(date.midnight());
