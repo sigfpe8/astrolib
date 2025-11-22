@@ -187,27 +187,42 @@ pub const Angle = union(enum) {
     }
 
     pub fn toHMSString(self: Angle, allocator: Allocator) ![]const u8 {
-        const hms = self.toHMS();
-        return try std.fmt.allocPrint(allocator,
-        "{s}{d:0>2}ʰ{d:0>2}ᵐ{d:0>2.0}ˢ",
-        .{if (hms.sign == '-') "-" else "", hms.hour, hms.min, hms.sec});
+        return try self.toHMS().toString(allocator);
     }
 
     pub fn toDMSString(self: Angle, allocator: Allocator) ![]const u8 {
-        const dms = self.toDMS();
-        return try std.fmt.allocPrint(allocator,
-        "{s}{d}°{d:0>2}′{d:0>2.0}″",
-        .{if (dms.sign == '-') "-" else "", dms.deg, dms.min, dms.sec});
+        return try self.toDMS().toString(allocator);
     }
 };
 
 // The following types (HMS and DMS) represent angles for human readability, not
 // for computation. They are useful for displaying angles in a more traditional format.
+// We leave the seconds as a float so that we might display its decimal part in the
+// future. For now we just round it up to an integer.
 pub const HMS = struct {
     sign:  u8,  // '+' or '-'
     hour: u32,  // nʰ  (1 hour = 15 degrees)
     min:  u32,  // nᵐ
     sec:  f64,  // nˢ
+
+    pub fn toString(self: HMS, allocator: Allocator) ![]const u8 {
+        // Round up seconds if necessary
+        var hi: u32 = self.hour;
+        var mi: u32 =  self.min;
+        var si: u32 = @intFromFloat(@round(self.sec));
+        if (si >= 60) {
+            si = 0;
+            mi += 1;
+            if (mi >= 60) {
+                mi = 0;
+                hi += 1;
+            }
+        }
+        return try std.fmt.allocPrint(allocator,
+                "{s}{d:0>2}ʰ{d:0>2}ᵐ{d:0>2.0}ˢ",
+                .{if (self.sign == '-') "-" else "",
+                        hi, mi, si});
+    }
 };
 
 pub const DMS = struct {
@@ -215,4 +230,25 @@ pub const DMS = struct {
     deg: u32,   // °  Degrees
     min: u32,   // '  Arc minutes
     sec: f64,   // "  Arc seconds
+
+    pub fn toString(self: DMS, allocator: Allocator) ![]const u8 {
+        // Round up seconds if necessary
+        var di: u32 = self.deg;
+        var mi: u32 =  self.min;
+        var si: u32 = @intFromFloat(@round(self.sec));
+        if (si >= 60) {
+            si = 0;
+            mi += 1;
+            if (mi >= 60) {
+                mi = 0;
+                di += 1;
+            }
+        }
+    
+        return try std.fmt.allocPrint(allocator,
+                "{s}{d}°{d:0>2}′{d:0>2}″",
+                .{if (self.sign == '-') "-" else "",
+                        di, mi, si});
+    }
+
 };

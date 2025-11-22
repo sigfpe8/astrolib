@@ -117,16 +117,25 @@ pub const GeoCoord = struct {
 
     /// Format string: dd°mm′ss″ N/S, dd°mm′ss″ E/W
     pub fn toString(self: GeoCoord, allocator: Allocator) ![]const u8 {
-        const lat_dms = self.lat.toDMS();
-        const lon_dms = self.lon.toDMS();
+        var lat_dms = self.lat.toDMS();
+        var lon_dms = self.lon.toDMS();
 
         const lat_hemisphere = if (lat_dms.sign == '-') "S" else "N";
         const lon_hemisphere = if (lon_dms.sign == '-') "W" else "E";
+        // Make sure we don't print the "-" sign
+        lat_dms.sign = '+';
+        lon_dms.sign = '+';
 
-        return std.fmt.allocPrint(allocator, "{d}°{d:0>2}′{d:0>2.0}″ {s}, {d}°{d:0>2}′{d:0>2.0}″ {s}",
+        const lat_str = try lat_dms.toString(allocator);
+        defer allocator.free(lat_str);
+        const lon_str = try lon_dms.toString(allocator);
+        defer allocator.free(lon_str);
+
+        // return std.fmt.allocPrint(allocator, "{d}°{d:0>2}′{d:0>2.0}″ {s}, {d}°{d:0>2}′{d:0>2.0}″ {s}",
+        return std.fmt.allocPrint(allocator, "{s} {s}, {s} {s}",
             .{
-                lat_dms.deg, lat_dms.min, lat_dms.sec, lat_hemisphere,
-                lon_dms.deg, lon_dms.min, lon_dms.sec, lon_hemisphere,
+                lat_str, lat_hemisphere,
+                lon_str, lon_hemisphere,
             });
     }
 
