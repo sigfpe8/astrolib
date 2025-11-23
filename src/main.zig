@@ -4,6 +4,7 @@ const lib = @import("astrolib");
 const ang = lib.ang;
 const ast = lib.ast;
 const crd = lib.crd;
+const sun = lib.sun;
 const Angle = ang.Angle;
 const DMS = ang.DMS;
 const HMS = ang.HMS;
@@ -20,39 +21,53 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var now = ast.now();
-    now.tz = ast.TimeZone.init(false, -3, 0);
-
-    const date_time_str = try now.toString(allocator);
-    std.debug.print("Current date and time: {s}\n", .{date_time_str});
     // std.debug.print("Sizeof(AstroDate): {}\n", .{@sizeOf(AstroDate)});
     // std.debug.print("Sizeof(TimeZone): {}\n", .{@sizeOf(TimeZone)});
-    allocator.free(date_time_str);
 
-    var date = AstroDate.fromDateAndHMS(2010, 2, 7, 23, 30, 0, .{});
-    date = ast.utToGST(date);
+    const date_ut = ast.now();
+    const date = ast.utToLCT(date_ut, ast.tzEST);
     const date_str = try date.toString(allocator);
-    std.debug.print("Date from JD 2436116.31: {s}\n", .{date_str});
-    allocator.free(date_str);
+    defer allocator.free(date_str);
 
-    const loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=38,.min=0,.sec=0}),   // New York City
-                                      Angle.fromDMS(DMS{.sign='-',.deg=78,.min=0,.sec=0}));
-    date= AstroDate.fromDateAndHMS(2016, 1, 21, 12, 0, 0, ast.tzEST);
-    const obj = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=5,.min=55,.sec=0}),  // Betelgeuse
-                                  Angle.fromDMS(DMS{.sign='+',.deg=7,.min=30,.sec=0}));
+    std.debug.print("\nCurrent date and time in NYC: {s}\n", .{date_str});
+
+    const loc = GeoCoord.init(Angle.fromDMS(DMS{.sign='+',.deg=40,.min=42,.sec=46}),   // New York City
+                                        Angle.fromDMS(DMS{.sign='-',.deg=74,.min=0,.sec=22}));
+    const loc_str = try loc.toString(allocator);
+    defer allocator.free(loc_str);
+
+    const ras = try sun.sunRiseAndSet(loc, date);
+
+    const strr = try ras.rise_lct.toTimeString(allocator);
+    defer allocator.free(strr);
+
+    const strs = try ras.set_lct.toTimeString(allocator);
+    defer allocator.free(strs);
+
+    std.debug.print("\nSunrise and sunset for NYC ({s}) today\n", .{loc_str});
+    std.debug.print("  Sunrise = {s}\n", .{strr});
+    std.debug.print("  Sunset  = {s}\n", .{strs});
+
+
+    const obj = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=5,.min=55,.sec=10.3053}),  // Betelgeuse
+                                  Angle.fromDMS(DMS{.sign='+',.deg=7,.min=24,.sec=25.426}));
+
+    const obj_str = try obj.toString(allocator);
+    defer allocator.free(obj_str);
+    std.debug.print("\nRise and set time for Betelgeuse ({s}) today in NYC:\n", .{obj_str});
 
     const rs = try crd.riseAndSet(loc, date, obj);
     const rise_lct_str = try rs.rise_lct.toString(allocator);
+    defer allocator.free(rise_lct_str);
     const set_lct_str = try rs.set_lct.toString(allocator);
+    defer allocator.free(set_lct_str);
     const rise_az_str = try rs.rise_az.toDMSString(allocator);
+    defer allocator.free(rise_az_str);
     const set_az_str = try rs.set_az.toDMSString(allocator);
+    defer allocator.free(set_az_str);
 
-    std.debug.print("Rise Time: {s}, Azimuth: {s}\n", .{rise_lct_str, rise_az_str});
-    std.debug.print("Set Time:  {s}, Azimuth: {s}\n", .{set_lct_str, set_az_str});
+    std.debug.print("  Rise Time: {s}, Azimuth: {s}\n", .{rise_lct_str, rise_az_str});
+    std.debug.print("  Set Time:  {s}, Azimuth: {s}\n", .{set_lct_str, set_az_str});
 
-    allocator.free(rise_lct_str);
-    allocator.free(set_lct_str);
-    allocator.free(rise_az_str);
-    allocator.free(set_az_str);
 }
 
