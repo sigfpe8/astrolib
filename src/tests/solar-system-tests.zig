@@ -4,7 +4,7 @@ const ang = lib.ang;
 const ast = lib.ast;
 const crd = lib.crd;
 const orb = lib.orb;
-const sun = lib.sun;
+const sol = lib.sol;
 
 const Angle = ang.Angle;
 
@@ -20,7 +20,7 @@ const allocator = std.testing.allocator;
 
 test "marchEquinox" {
     const year: Year = 2004;
-    const date = sun.marchEquinox(year);
+    const date = sol.marchEquinox(year);
     const date_str = try date.toDateTimeString(allocator);
     defer allocator.free(date_str);
     // std.debug.print("March equinox for {d}: {s}\n", .{year, date_str});
@@ -29,7 +29,7 @@ test "marchEquinox" {
 
 test "juneSolstice" {
     const year: Year = 2004;
-    const date = sun.juneSolstice(year);
+    const date = sol.juneSolstice(year);
     const date_str = try date.toDateTimeString(allocator);
     defer allocator.free(date_str);
     // std.debug.print("June solstice for {d}: {s}\n", .{year, date_str});
@@ -38,7 +38,7 @@ test "juneSolstice" {
 
 test "septemberEquinox" {
     const year: Year = 2004;
-    const date = sun.septemberEquinox(year);
+    const date = sol.septemberEquinox(year);
     const date_str = try date.toDateTimeString(allocator);
     defer allocator.free(date_str);
     // std.debug.print("September equinox for {d}: {s}\n", .{year, date_str});
@@ -47,7 +47,7 @@ test "septemberEquinox" {
 
 test "decemberSolstice" {
     const year: Year = 2004;
-    const date = sun.decemberSolstice(year);
+    const date = sol.decemberSolstice(year);
     const date_str = try date.toDateTimeString(allocator);
     defer allocator.free(date_str);
     // std.debug.print("December solstice for {d}: {s}\n", .{year, date_str});
@@ -57,7 +57,7 @@ test "decemberSolstice" {
 test "sunHorCoord" {
     const date = AstroDate.fromDateAndHMS(2015, 2, 5, 12, 0, 0, ast.tzEST);
     const loc = GeoCoord.init(Angle.fromDegrees(38), Angle.fromDegrees(-78));
-    const hr = sun.sunHorCoord(date, loc);
+    const hr = sol.sunHorCoord(date, loc);
     const hr_str = try hr.toString(allocator);
     defer allocator.free(hr_str);
     // std.debug.print("{s}\n\n", .{hr_str});
@@ -66,7 +66,7 @@ test "sunHorCoord" {
 
 test "sunRaDec" {
     const date = AstroDate.fromDateAndHMS(2015, 2, 5, 12, 0, 0, ast.tzEST);
-    const equ = sun.sunRaDec(date);
+    const equ = sol.sunRaDec(date);
     const equ_str = try equ.toString(allocator);
     defer allocator.free(equ_str);
     // std.debug.print("{s}\n\n", .{equ_str});
@@ -75,7 +75,7 @@ test "sunRaDec" {
 
 test "sunEclipticCoord" {
     const date = AstroDate.fromDateAndHMS(2015, 2, 5, 12, 0, 0, ast.tzEST);
-    const ecl = sun.sunEclipticCoord(date);
+    const ecl = sol.sunEclipticCoord(date);
     const ecl_str = try ecl.toString(allocator);
     defer allocator.free(ecl_str);
     // std.debug.print("{s}\n\n", .{ecl_str});
@@ -143,7 +143,7 @@ test "sunRiseAndSet" {
     // std.debug.print("Sun rise/set time test\n", .{});
 
     // std.debug.print("=> Lawrence approximation\n", .{});
-    const ras = try sun.sunRiseAndSet(loc, date);
+    const ras = try sol.sunRiseAndSet(loc, date);
 
     const strr = try ras.rise_lct.toTimeString(allocator);
     defer allocator.free(strr);
@@ -159,7 +159,7 @@ test "sunRiseAndSet" {
     // ----------------------------------------------------
     // std.debug.print("=> Wikipedia approximation \n", .{});
 
-    // const ras2 = try sun.sunRiseAndSet2(loc, date);
+    // const ras2 = try sol.sunRiseAndSet2(loc, date);
 
     // const strr2 = try ras2.rise_lct.toTimeString(allocator);
     // defer allocator.free(strr2);

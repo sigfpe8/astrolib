@@ -115,8 +115,8 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const sun_tests_mod = b.createModule(.{
-        .root_source_file = b.path("src/tests/sun-tests.zig"),
+    const solar_tests_mod = b.createModule(.{
+        .root_source_file = b.path("src/tests/solar-system-tests.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -142,8 +142,8 @@ pub fn build(b: *std.Build) void {
         .root_module = lawrence_tests_mod,
     });
 
-    const sun_test_exe = b.addTest(.{
-        .root_module = sun_tests_mod,
+    const solar_test_exe = b.addTest(.{
+        .root_module = solar_tests_mod,
     });
 
     // Create run steps for individual tests
@@ -151,7 +151,7 @@ pub fn build(b: *std.Build) void {
     const run_astrodate_test = b.addRunArtifact(astrodate_test_exe);
     const run_coord_test = b.addRunArtifact(coord_test_exe);
     const run_lawrence_test = b.addRunArtifact(lawrence_test_exe);
-    const run_sun_test = b.addRunArtifact(sun_test_exe);
+    const run_solar_test = b.addRunArtifact(solar_test_exe);
 
     // Create individual test steps
     const test_angle_step = b.step("test-angle", "Run angle tests");
@@ -166,8 +166,8 @@ pub fn build(b: *std.Build) void {
     const test_lawrence_step = b.step("test-lawrence", "Run lawrence tests");
     test_lawrence_step.dependOn(&run_lawrence_test.step);
 
-    const test_sun_step = b.step("test-sun", "Run sun tests");
-    test_sun_step.dependOn(&run_sun_test.step);
+    const test_solar_step = b.step("test-solar", "Run solar system tests");
+    test_solar_step.dependOn(&run_solar_test.step);
 
     // Create a combined test step
     const test_step = b.step("test", "Run all tests");
@@ -175,5 +175,5 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_astrodate_test.step);
     test_step.dependOn(&run_coord_test.step);
     test_step.dependOn(&run_lawrence_test.step);
-    test_step.dependOn(&run_sun_test.step);
+    test_step.dependOn(&run_solar_test.step);
 }

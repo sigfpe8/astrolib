@@ -4,7 +4,7 @@ const lib = @import("astrolib");
 const ang = lib.ang;
 const ast = lib.ast;
 const crd = lib.crd;
-const sun = lib.sun;
+const sol = lib.sol;
 const Angle = ang.Angle;
 const DMS = ang.DMS;
 const HMS = ang.HMS;
@@ -36,7 +36,7 @@ pub fn main() !void {
     const loc_str = try loc.toString(allocator);
     defer allocator.free(loc_str);
 
-    const ras = try sun.sunRiseAndSet(loc, date);
+    const ras = try sol.sunRiseAndSet(loc, date);
 
     const strr = try ras.rise_lct.toTimeString(allocator);
     defer allocator.free(strr);
