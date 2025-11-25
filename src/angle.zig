@@ -28,6 +28,14 @@ pub const sec_to_hrs: f64 = 1.0 / 3600.0;   // 1 second = 1/3600 hours
 pub const sec_to_min: f64 = 1.0 / 60.0;     // 1 second = 1/60 minutes
 pub const sec_to_deg: f64 = 1.0 / 3600.0;   // 1 arcsecond = 1/3600 degrees
 
+pub const AngleError = error{
+    InvalidAngleFormat,
+    DegreeIsTooBig,
+    HourIsTooBig,
+    MinuteIsTooBig,
+    SecondIsTooBig,
+};
+
 pub const Angle = union(enum) {
     deg: f64,   // Decimal degrees
     rad: f64,   // Radians
@@ -219,10 +227,79 @@ pub const HMS = struct {
             }
         }
         return try std.fmt.allocPrint(allocator,
-                "{s}{d:0>2}ʰ{d:0>2}ᵐ{d:0>2.0}ˢ",
+                "{s}{d:0>2}ʰ{d:0>2}ᵐ{d:0>2}ˢ",
                 .{if (self.sign == '-') "-" else "",
                         hi, mi, si});
     }
+
+    // Gets HMS from a string
+    //    HHhMMmSSs  or
+    //    HHʰMMᵐSSˢ  
+    //  0 <= HH < 24, 0 <= MM < 60, 0 <= SS < 60
+    pub fn fromString(str: []const u8) !HMS {
+        // const end = str.len;
+        var i: usize = 0;
+        var sign: u8 = '+';
+
+        // Parse optional sign
+        if (str[i] == '+') {
+            i += 1;
+        } else if (str[i] == '-') {
+            sign = '-';
+            i += 1;
+        }
+
+        var hour: u32 = undefined;
+        var min:  u32 = undefined;
+        var len: usize = undefined;
+        var chr: u21 = undefined;
+
+        // Parse Hour (HHh)
+        len, hour, chr = try parseVal(str[i..]);
+        i += len;
+        if (hour >= 24) {
+            return AngleError.HourIsTooBig;
+        }
+        if (chr != 'h' and chr != 'ʰ') {
+            return AngleError.InvalidAngleFormat;
+        }
+
+        // Parse Minute (MMm)
+        len, min, chr = try parseVal(str[i..]);
+        i += len;
+        if (min >= 60) {
+            return AngleError.MinuteIsTooBig;
+        }
+        if (chr != 'm' and chr != 'ᵐ') {
+            return AngleError.InvalidAngleFormat;
+        }
+
+        // Parse Second (SS[.DDD...]s)
+        const b = i; // Remember where it begins
+        var tmp: usize = undefined;
+
+        len, tmp, chr = try parseVal(str[i..]);
+        i += len;
+        if (tmp >= 60) {
+            return AngleError.SecondIsTooBig;
+        }
+        var sec: f64 = @floatFromInt(tmp);
+        if (chr == '.') {
+           len, tmp, chr = try parseVal(str[i..]);
+           i += len - (std.unicode.utf8CodepointSequenceLength(chr) catch 1); 
+           sec = try std.fmt.parseFloat(f64, str[b..i]);
+        }
+        if (chr != 's' and chr != 'ˢ') {
+            return AngleError.InvalidAngleFormat;
+        }
+
+        return .{
+            .sign = sign,
+            .hour = hour,
+            .min = min,
+            .sec = sec,
+        };
+    } 
 };
 
 pub const DMS = struct {
@@ -251,4 +328,114 @@ pub const DMS = struct {
                         di, mi, si});
     }
 
+    // Gets DMS from a string
+    //    DD°MM'SS"  or
+    //    DD°MM′SS″
+    //  0 <= DD < 360, 0 <= MM < 60, 0 <= SS < 60
+    pub fn fromString(str: []const u8) !DMS {
+        // const end = str.len;
+        var i: usize = 0;
+        var sign: u8 = '+';
+
+        // Parse optional sign
+        if (str[i] == '+') {
+            i += 1;
+        } else if (str[i] == '-') {
+            sign = '-';
+            i += 1;
+        }
+
+        var deg: u32 = undefined;
+        var min: u32 = undefined;
+        var len: usize = undefined;
+        var chr: u21 = undefined;
+
+        // Parse Degree (DD°)
+        len, deg, chr = try parseVal(str[i..]);
+        i += len;
+        if (deg >= 360) {
+            return AngleError.DegreeIsTooBig;
+        }
+        if (chr != '°') {
+            return AngleError.InvalidAngleFormat;
+        }
+
+        // Parse Minute (MM')
+        len, min, chr = try parseVal(str[i..]);
+        i += len;
+        if (min >= 60) {
+            return AngleError.MinuteIsTooBig;
+        }
+        if (chr != '\'' and chr != '′') {
+            return AngleError.InvalidAngleFormat;
+        }
+
+        // Parse Second (SS[.DDD...]")
+        const b = i; // Remember where it begins
+        var tmp: usize = undefined;
+
+        len, tmp, chr = try parseVal(str[i..]);
+        i += len;
+        if (tmp >= 60) {
+            return AngleError.SecondIsTooBig;
+        }
+        var sec: f64 = @floatFromInt(tmp);
+        if (chr == '.') {
+           len, tmp, chr = try parseVal(str[i..]);
+           i += len - (std.unicode.utf8CodepointSequenceLength(chr) catch 1); 
+           sec = try std.fmt.parseFloat(f64, str[b..i]);
+        }
+        if (chr != '"' and chr != '″') {
+            return AngleError.InvalidAngleFormat;
+        }
+
+        return .{
+            .sign = sign,
+            .deg = deg,
+            .min = min,
+            .sec = sec,
+        };
+    } 
 };
+
+/// Helper function to HMS/DMS.toString()
+/// Parses an unsigned integer and the character that follows it.
+pub fn parseVal(str: []const u8) !struct {
+        usize,   // The length of the parsed part (including the following char)
+        u32,     // The parsed value
+        u21      // The Unicode code point of the following char
+    } {
+    const end = str.len;
+    var len: usize = 0;
+    
+    while (len < end) : (len += 1) {
+        if (!std.ascii.isDigit(str[len])) {
+            break;
+        }
+    }
+    if (len == 0) {    // Must have at least 1 digit
+        return AngleError.InvalidAngleFormat;
+    }
+    const val = try std.fmt.parseUnsigned(u32, str[0..len], 10);
+
+    var chr: u21 = 0;
+    var n: usize = 0;
+    if (len < end) {
+        n = try std.unicode.utf8ByteSequenceLength(str[len]);
+        if (len + n > end) {
+            return AngleError.InvalidAngleFormat;
+        }
+        const utf8 = str[len..len+n];
+        chr = switch (n) {
+            1 => str[len],
+            2 => try std.unicode.utf8Decode2(utf8[0..2].*),
+            3 => try std.unicode.utf8Decode3(utf8[0..3].*),
+            4 => try std.unicode.utf8Decode4(utf8[0..4].*),
+            else => 0,
+        };
+    } else {
+        return AngleError.InvalidAngleFormat;
+    }
+
+    return .{ len+n, val, chr };
+}

@@ -7,6 +7,7 @@ const DMS = ang.DMS;
 const HMS = ang.HMS;
 
 const expect = std.testing.expect;
+const expectError = std.testing.expectError;
 const allocator = std.testing.allocator;
 
 test "toString" {
@@ -97,4 +98,36 @@ test "fromHMS" {
 
     hrs = angle.toHours().hrs;
     try expect(std.math.approxEqAbs(f64, hrs, -0.0002777778, 0.0000001));
+}
+
+test "HMS.fromString" {
+    var hms = try HMS.fromString("8h35m47s");
+    try expect(hms.sign == '+' and hms.hour == 8 and hms.min == 35 and hms.sec == 47.0);
+    hms = try HMS.fromString("+8ʰ53ᵐ01ˢ");
+    try expect(hms.sign == '+' and hms.hour == 8 and hms.min == 53 and hms.sec == 1.0);
+    hms = try HMS.fromString("-05h55m17.5s");
+    try expect(hms.sign == '-' and hms.hour == 5 and hms.min == 55 and hms.sec == 17.5);
+    hms = try HMS.fromString("-23ʰ59m59.555s #$%");
+    try expect(hms.sign == '-' and hms.hour == 23 and hms.min == 59 and hms.sec == 59.555);
+
+    try expectError(ang.AngleError.InvalidAngleFormat, HMS.fromString("12 00 00"));
+    try expectError(ang.AngleError.HourIsTooBig, HMS.fromString("24h00m00s"));
+    try expectError(ang.AngleError.MinuteIsTooBig, HMS.fromString("23h60m00s"));
+    try expectError(ang.AngleError.SecondIsTooBig, HMS.fromString("23h59m60s"));
+}
+
+test "DMS.fromString" {
+    var dms = try DMS.fromString("8°35'47\"");
+    try expect(dms.sign == '+' and dms.deg == 8 and dms.min == 35 and dms.sec == 47.0);
+    dms = try DMS.fromString("+358°53′01″");
+    try expect(dms.sign == '+' and dms.deg == 358 and dms.min == 53 and dms.sec == 1.0);
+    dms = try DMS.fromString("-05°55'17.5″");
+    try expect(dms.sign == '-' and dms.deg == 5 and dms.min == 55 and dms.sec == 17.5);
+    dms = try DMS.fromString("-23°59'59.555″ #$%");
+    try expect(dms.sign == '-' and dms.deg == 23 and dms.min == 59 and dms.sec == 59.555);
+
+    try expectError(ang.AngleError.InvalidAngleFormat, DMS.fromString("90 00 00"));
+    try expectError(ang.AngleError.DegreeIsTooBig, DMS.fromString("360°00'00\""));
+    try expectError(ang.AngleError.MinuteIsTooBig, DMS.fromString("270°60'00s"));
+    try expectError(ang.AngleError.SecondIsTooBig, DMS.fromString("180°59'60\""));
 }
