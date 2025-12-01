@@ -118,7 +118,7 @@ pub const Angle = union(enum) {
     }
 
     pub fn atan2(y: f64, x: f64) Angle {
-        return Angle.fromRadians(std.math.atan2(y, x));
+        return Angle.fromRadians(std.math.atan2(y, x)).reduce360();
     }
 
     pub fn toHMS(self: Angle) HMS {
@@ -237,7 +237,6 @@ pub const HMS = struct {
     //    HHʰMMᵐSSˢ  
     //  0 <= HH < 24, 0 <= MM < 60, 0 <= SS < 60
     pub fn fromString(str: []const u8) !HMS {
-        // const end = str.len;
         var i: usize = 0;
         var sign: u8 = '+';
 
@@ -333,7 +332,6 @@ pub const DMS = struct {
     //    DD°MM′SS″
     //  0 <= DD < 360, 0 <= MM < 60, 0 <= SS < 60
     pub fn fromString(str: []const u8) !DMS {
-        // const end = str.len;
         var i: usize = 0;
         var sign: u8 = '+';
 

@@ -320,11 +320,7 @@ pub const RaDec = struct {
 
         const y = sin_ra * epoch.cos_obl + tan_dec * epoch.sin_obl;
         const x = cos_ra;
-
-        var lon = Angle.atan2(y, x).toDegrees();
-        if (lon.deg < 0.0) { // [-180°, 180°) -> [0°, 360°)
-            lon = Angle.fromDegrees(lon.deg + 360.0);
-        }
+        const lon = Angle.atan2(y, x);
 
         return EclipticCoord.init(
             lat,
@@ -420,11 +416,7 @@ pub const EclipticCoord = struct {
 
         const y = sin_lon * epoch.cos_obl - tan_lat * epoch.sin_obl;
         const x = cos_lon;
-
-        var ra = Angle.atan2(y, x).toHours();
-        if (ra.hrs < 0.0) { // [-12h, 12h) -> [0h, 24h)
-            ra = Angle.fromHours(ra.hrs + 24.0);
-        }
+        const ra = Angle.atan2(y, x);
 
         return RaDec.init(
             ra,
@@ -477,12 +469,7 @@ pub const GalacticCoord = struct {
 
         const y = cos_lat * cos_lon;
         const x = sin_lat * cos_dec0 - cos_lat * sin_dec0 * sin_lon;
-        var ra = Angle.atan2(y, x).toHours();
-
-        if (ra.hrs < 0.0) { // [-12h, 12h) -> [0h, 24h)
-            ra = Angle.fromHours(ra.hrs + 24.0);
-        }
-
+        var ra = Angle.atan2(y, x);
         ra = Angle.fromHours(@mod(ra.toHours().hrs + epoch.gra0.toHours().hrs, 24.0));
 
         return RaDec.init(

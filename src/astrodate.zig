@@ -600,6 +600,22 @@ pub fn utToLCT(date: AstroDate, tz: TimeZone) AstroDate {
     return date_lct;
 }
 
+/// Convert UT (Universal Time) to TT (Terrestrial Time)
+pub fn utToTT(date: AstroDate) AstroDate {
+    // [Lawrence, 2018] p 166
+    var y: Year = date.year;
+    var m: Month = date.month;
+    var d: Day = date.day;
+    var tt_sec = date.hours * 3600.0 + 63.8; // TT is ahead of UT by 63.8 seconds (as of 2024)
+    if (tt_sec > 86400) {
+        y, m, d = nextDay(y, m, d);
+        tt_sec -= 86400; // Wrap around if TT exceeds 24 hours
+    }
+    const tt = tt_sec / 3600.0; // Convert back to decimal hours
+    const date_tt = AstroDate.fromDateAndHours(y, m, d, tt, .{});
+    return date_tt;
+}
+
 /// Convert UT to GST (Greenwich Sidereal Time)
 pub fn utToGST(date: AstroDate) AstroDate {
     // [Lawrence, 2018] p 47-48
