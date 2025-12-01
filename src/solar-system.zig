@@ -26,6 +26,12 @@ const orb = @import("orbits.zig");
 const pi:     f64 = std.math.pi;
 const two_pi: f64 = pi * 2.0;
 
+// --------------------------------------------------------------------------
+//
+// Sun
+//
+// --------------------------------------------------------------------------
+
 /// Formulas for equinoxes and solstices from [Lawrence, 2018], which are
 /// accurate only to about 15-20 minutes.
 /// Return the March equinox date for a given year
@@ -86,16 +92,11 @@ pub fn sunRaDec(date: AstroDate) RaDec {
 
 /// Return the Sun's ecliptic coordinates for a given date (LCT)
 pub fn sunEclipticCoord(date: AstroDate) EclipticCoord {
-    const ut = ast.lctToUT(date);
-    const jde = AstroDate.fromDateAndHMS(2000, 1, 1, 12, 0, 0, .{}).toJD();
-    const jd = ut.toJD();
-    const de = jd - jde;
     const e = crd.epoch.ecc;
 
     // Mean anomaly
-    const M = Angle.fromDegrees((360.0 * de) / 365.242_191 + 
-                                      crd.epoch.sun_elon.toDegrees().deg -
-                                      crd.epoch.sun_elong.toDegrees().deg).reduce360();
+    const M = sunMeanAnomaly(date);
+    
     // Equation of the center
     // const Ec = Angle.fromRadians(2 * e * M.sin()).toDegrees();
     // True anomaly
@@ -108,6 +109,19 @@ pub fn sunEclipticCoord(date: AstroDate) EclipticCoord {
     const lon = Angle.fromDegrees(v.toDegrees().deg + crd.epoch.sun_elong.toDegrees().deg).reduce360();
     // Ecliptic coordinates
     return EclipticCoord.init(Angle.fromDegrees(0), lon);
+}
+
+/// Return the Sun's mean anomaly for a given date (LCT)
+pub fn sunMeanAnomaly(date: AstroDate) Angle {
+    const ut = ast.lctToUT(date);
+    const jde = crd.epoch.jd;
+    const jd = ut.toJD();
+    const De = jd - jde;
+
+    // Mean anomaly
+    return Angle.fromDegrees((360.0 * De) / 365.242_191 + 
+                                crd.epoch.sun_elon.toDegrees().deg -
+                                crd.epoch.sun_elong.toDegrees().deg).reduce360();
 }
 
 /// Return approximate local time for sunrise and sunset (Lawrence, 2018)
