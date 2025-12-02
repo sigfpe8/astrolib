@@ -4,6 +4,7 @@ const ang = @import("angle.zig");
 const Angle = ang.Angle;
 const DMS = ang.DMS;
 const HMS = ang.HMS;
+const deg_to_rad = ang.deg_to_rad;
 
 const ast = @import("astrodate.zig");
 const AstroDate = ast.AstroDate;
@@ -118,7 +119,6 @@ pub fn sunMeanAnomaly(date: AstroDate) Angle {
     const jd = ut.toJD();
     const De = jd - jde;
 
-    // Mean anomaly
     return Angle.fromDegrees((360.0 * De) / 365.242_191 + 
                                 crd.epoch.sun_elon.toDegrees().deg -
                                 crd.epoch.sun_elong.toDegrees().deg).reduce360();
@@ -194,3 +194,72 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
         .set_lct  = ast.utToLCT(lcts, date.tz),
     };
 }
+
+// --------------------------------------------------------------------------
+//
+// Moon
+//
+// --------------------------------------------------------------------------
+
+/// Return the Moon's horizontal coordinates for a given date (LCT) and location
+pub fn moonHorCoord(date: AstroDate, loc: GeoCoord) HorCoord {
+    const lst_hrs = ast.lctToLST(date, loc.lon).hours;
+    const eq = moonRaDec(date);
+    return eq.toHor(loc.lat, lst_hrs);
+}
+
+/// Return the Moon's equatorial coordinates for a given date (LCT)
+pub fn moonRaDec(date: AstroDate) RaDec {
+    return moonEclipticCoord(date).toRaDec();
+}
+
+/// Return the Moon's ecliptic coordinates for a given date (LCT)
+pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
+    // Algorithm by [Lawrence, 2018], p. 165
+
+    const ut = ast.lctToUT(date);
+    const tt = ast.utToTT(ut);
+    const jd = tt.toJD();
+    const De = jd - crd.epoch.jd;
+    const sun = sunEclipticCoord(date);
+    // Sun's Mean anomaly
+    const Ms = sunMeanAnomaly(date);
+    // Moon's uncorrected mean longitude
+    var lon = Angle.fromDegrees(13.176_339_686 * De + 218.316_433).reduce360();
+    // Moon's uncorrected mean longitude of the ascending node
+    var node_lon = Angle.fromDegrees(125.044_522 - 0.052_953_9 * De).reduce360();
+    // Moon's uncorrected mean anomaly
+    const Mm = Angle.fromDegrees(lon.toDegrees().deg - 0.111_404_1 * De - 83.353_451).reduce360();
+
+    // Corrections to the Moon's anomaly (all in degrees) (7.3.4-7.3.6)
+    const Ae = 0.1858 * Ms.sin();
+    const Ev = 1.2739 * @sin(2 * (lon.toRadians().rad - sun.lon.toRadians().rad) - Mm.toRadians().rad);
+    const Ca = Mm.toDegrees().deg + Ev - Ae - 0.37 * Ms.sin();
+
+    // Moon's true anomaly (7.3.7)
+    const vm = 6.2886 * @sin(Ca * pi / 180.0) + 0.214 * @sin(2 * Ca * pi / 180.0);
+    lon = Angle.fromDegrees(lon.toDegrees().deg + Ev + vm - Ae).reduce360();
+    // Variation correction (7.3.8)
+    const V = 0.6583 * @sin(2 * (lon.toRadians().rad - sun.lon.toRadians().rad));
+
+    lon = Angle.fromDegrees(lon.toDegrees().deg + V).reduce360();   // (7.3.10)
+
+    // Corrected longitude of the ascending node (7.3.11)
+    node_lon = Angle.fromDegrees(node_lon.toDegrees().deg - 0.16 * Ms.sin()).reduce360();
+
+    // Moon's ecliptic latitude and longitude (7.3.12-7.3.13)
+    const e_rad = 5.145_396_4 * deg_to_rad;
+    const sin_e = @sin(e_rad);
+    const cos_e = @cos(e_rad);
+    const delta_lon = lon.toRadians().rad - node_lon.toRadians().rad;
+    const sin_lon = @sin(delta_lon);
+    const y = sin_lon * cos_e;
+    const x = @cos(delta_lon);
+    const T = Angle.atan2(y, x);
+
+    lon = Angle.fromDegrees(T.toDegrees().deg + node_lon.toDegrees().deg).reduce360();
+    const lat = Angle.asin(sin_lon * sin_e);
+
+    return EclipticCoord.init(lat, lon);
+}
+

@@ -170,3 +170,30 @@ test "sunRiseAndSet" {
     // std.debug.print("  LCTr = {s}\n", .{strr2});
     // std.debug.print("  LCTs = {s}\n", .{strs2});
 }
+
+test "moonHorCoord" {
+    const date = AstroDate.fromDateAndHours(2015, 1, 1, 22, ast.tzEST);
+    const loc = GeoCoord.init(Angle.fromDegrees(38),   // New York City
+                                        Angle.fromDegrees(-78));
+    const hc = sol.moonHorCoord(date, loc);
+    const hc_str = try hc.toString(allocator);
+    defer allocator.free(hc_str);
+    try expect(std.mem.eql(u8, hc_str, "h=68°51′54″, A=192°11′24″"));
+}
+
+test "moonRaDec" {
+    const date = AstroDate.fromDateAndHours(2015, 1, 1, 22, ast.tzEST);
+    const equ = sol.moonRaDec(date);
+    const equ_str = try equ.toString(allocator);
+    defer allocator.free(equ_str);
+    try expect(std.mem.eql(u8, equ_str, "α=04ʰ15ᵐ28ˢ, δ=17°14′56″"));
+}
+
+test "moonEclipticCoord" {
+    const date = AstroDate.fromDateAndHours(2015, 1, 1, 22, ast.tzEST);
+    const ec = sol.moonEclipticCoord(date);
+    const ec_str = try ec.toString(allocator);
+    defer allocator.free(ec_str);
+    try expect(std.mem.eql(u8, ec_str, "β=-00ʰ15ᵐ50ˢ, λ=65°03′35″"));
+}
+
