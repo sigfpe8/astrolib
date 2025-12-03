@@ -16,6 +16,7 @@ const Day = ast.Day;
 const GeoCoord = crd.GeoCoord;
 
 const expect = std.testing.expect;
+const expectApproxEqAbs = std.testing.expectApproxEqAbs;
 const allocator = std.testing.allocator;
 
 test "marchEquinox" {
@@ -197,3 +198,17 @@ test "moonEclipticCoord" {
     try expect(std.mem.eql(u8, ec_str, "β=-00ʰ15ᵐ50ˢ, λ=65°03′35″"));
 }
 
+test "moonPhase" {
+    const date = AstroDate.fromDateAndHMS(2015, 1, 1, 0, 0, 0, .{});
+    const phase = sol.moonPhase(date);
+
+    // std.debug.print("Elongation={d:.6}\n", .{phase.elong.toDegrees().deg});
+    // std.debug.print("Illumination={d:.6}\n", .{phase.illum});
+    // std.debug.print("Age days={d:.6}\n", .{phase.age_days});
+    // std.debug.print("Phase name={s}\n", .{phase.name});
+
+    try expectApproxEqAbs(129.968_447, phase.elong.toDegrees().deg, 0.000_001);
+    try expectApproxEqAbs(0.821_907, phase.illum, 0.000_001);
+    try expectApproxEqAbs(10.661_240, phase.age_days, 0.000_001);
+    try expect(std.mem.eql(u8, phase.name, "Waxing Gibbous"));
+}

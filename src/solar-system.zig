@@ -213,6 +213,19 @@ pub fn moonRaDec(date: AstroDate) RaDec {
     return moonEclipticCoord(date).toRaDec();
 }
 
+pub fn moonMeanAnomaly(date: AstroDate) Angle {
+    const ut = ast.lctToUT(date);
+    const tt = ast.utToTT(ut);
+    const jd = tt.toJD();
+    const De = jd - crd.epoch.jd;
+
+    // Moon's uncorrected mean longitude (7.3.1)
+    var lon = Angle.fromDegrees(13.176_339_686 * De + 218.316_433).reduce360();
+
+    // Moon's uncorrected mean anomaly (7.3.3)
+    return Angle.fromDegrees(lon.toDegrees().deg - 0.111_404_1 * De - 83.353_451).reduce360();
+}
+
 /// Return the Moon's ecliptic coordinates for a given date (LCT)
 pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
     // Algorithm by [Lawrence, 2018], p. 165
@@ -221,15 +234,18 @@ pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
     const tt = ast.utToTT(ut);
     const jd = tt.toJD();
     const De = jd - crd.epoch.jd;
-    const sun = sunEclipticCoord(date);
-    // Sun's Mean anomaly
-    const Ms = sunMeanAnomaly(date);
-    // Moon's uncorrected mean longitude
+
+    // Moon's uncorrected mean longitude (7.3.1)
     var lon = Angle.fromDegrees(13.176_339_686 * De + 218.316_433).reduce360();
     // Moon's uncorrected mean longitude of the ascending node
     var node_lon = Angle.fromDegrees(125.044_522 - 0.052_953_9 * De).reduce360();
-    // Moon's uncorrected mean anomaly
+
+    // Moon's uncorrected mean anomaly (7.3.3)
     const Mm = Angle.fromDegrees(lon.toDegrees().deg - 0.111_404_1 * De - 83.353_451).reduce360();
+
+    // Sun's position and Mean anomaly
+    const sun = sunEclipticCoord(date);
+    const Ms = sunMeanAnomaly(date);
 
     // Corrections to the Moon's anomaly (all in degrees) (7.3.4-7.3.6)
     const Ae = 0.1858 * Ms.sin();
@@ -238,11 +254,11 @@ pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
 
     // Moon's true anomaly (7.3.7)
     const vm = 6.2886 * @sin(Ca * pi / 180.0) + 0.214 * @sin(2 * Ca * pi / 180.0);
-    lon = Angle.fromDegrees(lon.toDegrees().deg + Ev + vm - Ae).reduce360();
+    lon = Angle.fromDegrees(lon.toDegrees().deg + Ev + vm - Ae).reduce360();  // λ' (7.3.9)
     // Variation correction (7.3.8)
     const V = 0.6583 * @sin(2 * (lon.toRadians().rad - sun.lon.toRadians().rad));
 
-    lon = Angle.fromDegrees(lon.toDegrees().deg + V).reduce360();   // (7.3.10)
+    lon = Angle.fromDegrees(lon.toDegrees().deg + V).reduce360();   // λt (7.3.10)
 
     // Corrected longitude of the ascending node (7.3.11)
     node_lon = Angle.fromDegrees(node_lon.toDegrees().deg - 0.16 * Ms.sin()).reduce360();
@@ -263,3 +279,50 @@ pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
     return EclipticCoord.init(lat, lon);
 }
 
+const MoonPhase = struct {
+    elong: Angle,       // Elongation angle (D)
+    illum: f64,         // Illumination fraction (0..1)
+    age_days: f64,      // Age in days since New Moon
+    name: []const u8,   // Phase name
+};
+
+/// Return the Moon phase information for a given date (LCT)
+pub fn moonPhase(date: AstroDate) MoonPhase {
+    const Mm = moonMeanAnomaly(date);
+    const moon = moonEclipticCoord(date);
+    const sun = sunEclipticCoord(date);
+
+    // Elongation angle or age (7.6.5)
+    const elong = Angle.acos(@cos(moon.lon.toRadians().rad - sun.lon.toRadians().rad) * moon.lat.cos()).reduce360();
+    const days = (elong.toDegrees().deg / 360.0) * 29.530_6;
+
+    // Phase angle (7.6.6)
+    const sin_mm = Mm.sin();
+    const t1 = (1 - 0.054_9 * sin_mm);
+    const t2 = (1 - 0.016_7 * sin_mm);
+    const pa = 180 - elong.toDegrees().deg - 0.146_8 * (t1 / t2) * elong.sin();
+
+    // Illumination fraction (7.6.7)
+    const illum = (1 + @cos(pa * pi / 180.0)) * 0.5;
+    
+    const name = phase_names[@intFromFloat(@trunc((elong.toDegrees().deg + 22.5) / 45.0))];
+
+    return .{
+        .elong = elong,
+        .illum = illum,
+        .age_days = days,
+        .name = name,
+    };
+}
+
+const phase_names = [_][]const u8{
+    "New Moon",
+    "Waxing Crescent",
+    "First Quarter",
+    "Waxing Gibbous",
+    "Full Moon",
+    "Waning Gibbous",
+    "Last Quarter",
+    "Waning Crescent",
+    "New Moon",
+};
