@@ -27,6 +27,8 @@ const orb = @import("orbits.zig");
 const pi:     f64 = std.math.pi;
 const two_pi: f64 = pi * 2.0;
 
+const Allocator = std.mem.Allocator;
+
 // --------------------------------------------------------------------------
 //
 // Sun
@@ -213,6 +215,7 @@ pub fn moonRaDec(date: AstroDate) RaDec {
     return moonEclipticCoord(date).toRaDec();
 }
 
+/// Return the Moon's mean anomaly for a given date (LCT)
 pub fn moonMeanAnomaly(date: AstroDate) Angle {
     const ut = ast.lctToUT(date);
     const tt = ast.utToTT(ut);
@@ -326,3 +329,344 @@ const phase_names = [_][]const u8{
     "Waning Crescent",
     "New Moon",
 };
+
+/// Solar system bodies, per [Lawrence, 2018]
+pub const Body = struct {
+    name: []const u8,
+    period: f64,                    // In Tropical years
+    mass: f64,                      // Relative to the Earth
+    radius: f64,                    // In Km (averages of polar and equatorial)
+    day: f64,                       // Length relative to Earth (24h)
+    eccentricity: f64,              // Orbital eccentricity (ellipses only)
+    semi_major_axis_au: f64,        // Semi-major axis in AU
+    semi_major_axis_km: f64,        // Semi-major axis in Km
+    ang_diam_sec: f64,             // Angular diameter in arc seconds
+    ang_diam_deg: f64,             // Angular diameter in degrees
+    visual_mag: f64,                // Apparent visual magnitude at 1 AU
+    grav_parm: f64,                 // In Km^3/s^2
+    inclination: f64,               // Orbit inclination at epoch, in degrees
+    lon_at_epoch: f64,              // Longitude at epoch, in degrees
+    lon_at_peri: f64,               // Longitude at perihelion at epoch, in degrees
+    lon_asc_node: f64,              // Longitude of ascending node, in degrees
+};
+
+pub const Sun: usize = 0;
+pub const Moon: usize = Sun + 1;
+pub const Earth: usize = Moon + 1;
+pub const Mercury: usize = Earth + 1;
+pub const Venus: usize = Mercury + 1;
+pub const Mars: usize = Venus + 1;
+pub const Jupiter: usize = Mars + 1;
+pub const Saturn: usize = Jupiter + 1;
+pub const Uranus: usize = Saturn + 1;
+pub const Neptune: usize = Uranus + 1;
+pub const Pluto: usize = Neptune + 1;
+
+pub const bodies= [_]Body{
+    Body {
+        .name = "Sun",
+        .period = 0,
+        .mass = 333000,
+        .radius = 695700,
+        .day = 25.449,
+        .eccentricity = 0.016708,
+        .semi_major_axis_au = 1.0,
+        .semi_major_axis_km = 1.495985E08,
+        .ang_diam_sec = 1919,
+        .ang_diam_deg = 0.533128,
+        .visual_mag = -26.74,
+        .grav_parm = 1.32712E11,
+        .inclination = 0.00005,
+        .lon_at_epoch = 280.466069,
+        .lon_at_peri = 282.938346,
+        .lon_asc_node = 0,
+    },
+    Body {
+        .name = "Moon",
+        .period = 0,
+        .mass = 0.0123,
+        .radius = 1738.1,
+        .day = 27.322,
+        .eccentricity = 0.0549,
+        .semi_major_axis_au = 0.002570,
+        .semi_major_axis_km = 384400,
+        .ang_diam_sec = 0,
+        .ang_diam_deg = 0.5181,
+        .visual_mag = -12.74,
+        .grav_parm = 4900,
+        .inclination = 5.1453964,
+        .lon_at_epoch = 218.316433,
+        .lon_at_peri = 83.353451,
+        .lon_asc_node = 125.044522,
+    },
+    Body {
+        .name = "Earth",
+        .period = 1.0000174,
+        .mass = 1.0,
+        .radius = 6378.14,
+        .day = 1.0,
+        .eccentricity = 0.01671123,
+        .semi_major_axis_au = 1.00000261,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 0,
+        .ang_diam_deg = 0,
+        .visual_mag = 0,
+        .grav_parm = 398600,
+        .inclination = -0.00001531,
+        .lon_at_epoch = 100.46457166,
+        .lon_at_peri = 102.93768193,
+        .lon_asc_node = 0,
+    },
+    Body {
+        .name = "Mercury",
+        .period = 0.2408467,
+        .mass = 0.055274,
+        .radius = 2439.7,
+        .day = 58.6462,
+        .eccentricity = 0.20563593,
+        .semi_major_axis_au = 0.38709927,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 6.74,
+        .ang_diam_deg = 0,
+        .visual_mag = -0.42,
+        .grav_parm = 22032,
+        .inclination = 7.00497902,
+        .lon_at_epoch = 252.25032350,
+        .lon_at_peri = 77.45779628,
+        .lon_asc_node = 48.33076593,
+    },
+    Body {
+        .name = "Venus",
+        .period = 0.61519726,
+        .mass = 0.814998,
+        .radius = 6051.8,
+        .day = 243.018,
+        .eccentricity = 0.00677672,
+        .semi_major_axis_au = 0.72333566,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 16.92,
+        .ang_diam_deg = 0,
+        .visual_mag = -4.40,
+        .grav_parm = 324860,
+        .inclination = 3.39467605,
+        .lon_at_epoch = 181.97909950,
+        .lon_at_peri = 131.60246718,
+        .lon_asc_node = 76.67984255,
+    },
+    Body {
+        .name = "Mars",
+        .period = 1.8808476,
+        .mass = 0.107447,
+        .radius = 3389.5,
+        .day = 1.02595676,
+        .eccentricity = 0.09339410,
+        .semi_major_axis_au = 1.52371034,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 9.36,
+        .ang_diam_deg = 0,
+        .visual_mag = -1.52,
+        .grav_parm = 42828,
+        .inclination = 1.84969142,
+        .lon_at_epoch = -4.55343205,
+        .lon_at_peri = -23.94362959,
+        .lon_asc_node = 49.55953891,
+    },
+    Body {
+        .name = "Jupiter",
+        .period = 11.862615,
+        .mass = 317.828133,
+        .radius = 69911,
+        .day = 0.41354,
+        .eccentricity = 0.0483927,
+        .semi_major_axis_au = 5.20288700,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 196.74,
+        .ang_diam_deg = 0,
+        .visual_mag = -9.40,
+        .grav_parm = 126687000,
+        .inclination = 1.30439695,
+        .lon_at_epoch = 34.39644051,
+        .lon_at_peri = 14.72847983,
+        .lon_asc_node = 100.47390909,
+    },
+    Body {
+        .name = "Saturn",
+        .period = 29.447498,
+        .mass = 95.160904,
+        .radius = 58232,
+        .day = 0.44401,
+        .eccentricity = 0.05386179,
+        .semi_major_axis_au = 9.53667594,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 165.60,
+        .ang_diam_deg = 0,
+        .visual_mag = -8.88,
+        .grav_parm = 37931000,
+        .inclination = 2.48599187,
+        .lon_at_epoch = 49.95424423,
+        .lon_at_peri = 92.59887831,
+        .lon_asc_node = 113.66242448,
+    },
+    Body {
+        .name = "Uranus",
+        .period = 84.016846,
+        .mass = 14.535757,
+        .radius = 25362,
+        .day = 0.71833,
+        .eccentricity = 0.04725744,
+        .semi_major_axis_au = 19.18916464,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 65.80,
+        .ang_diam_deg = 0,
+        .visual_mag = -7.19,
+        .grav_parm = 5794000,
+        .inclination = 0.77263783,
+        .lon_at_epoch = 313.23810451,
+        .lon_at_peri = 170.95427630,
+        .lon_asc_node = 74.01692503,
+    },
+    Body {
+        .name = "Neptune",
+        .period = 164.79132,
+        .mass = 17.147813,
+        .radius = 24622,
+        .day = 0.67125,
+        .eccentricity = 0.00859048,
+        .semi_major_axis_au = 30.06992276,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 62.20,
+        .ang_diam_deg = 0,
+        .visual_mag = -6.87,
+        .grav_parm = 6835100,
+        .inclination = 1.77004347 ,
+        .lon_at_epoch = -55.12002969,
+        .lon_at_peri = 44.96476227,
+        .lon_asc_node = 131.78422574,
+    },
+    Body {
+        .name = "Pluto",
+        .period = 247.92065,
+        .mass = 0.0022192,
+        .radius = 1151,
+        .day = 6.3872,
+        .eccentricity = 0.24882730,
+        .semi_major_axis_au = 39.48211675,
+        .semi_major_axis_km = 0,
+        .ang_diam_sec = 8.20,
+        .ang_diam_deg = 0,
+        .visual_mag = -1.00,
+        .grav_parm = 870,
+        .inclination = 17.14001206,
+        .lon_at_epoch = 238.92903833,
+        .lon_at_peri = 224.06891629,
+        .lon_asc_node = 110.30393684,
+    },
+};
+
+/// Heliocentric position of a celestial body for a given date
+pub const HelioCoord = struct {
+    lat: Angle,      // Heliocentric Ecliptic Latitude [-90°, +90°]  (Λ)
+    lon: Angle,      // Heliocentric Ecliptic Longitude [0°, 360°)   (L)
+    v: Angle,        // True anomaly
+    r: f64,          // Radius vector (AU)
+
+    pub fn fromDate(pb: *const Body, date: AstroDate) HelioCoord {
+        const ut = ast.lctToUT(date);
+        const jde = crd.epoch.jd;
+        const jd = ut.toJD();
+        const De = jd - jde;
+        const e = pb.eccentricity;
+        // std.debug.print("JD = {d:.3}, De = {d:.3}\n", .{jd, De});
+
+        const M = Angle.fromDegrees((360.0 * De) / (365.242_191 * pb.period) + pb.lon_at_epoch - pb.lon_at_peri).reduce360();
+        // std.debug.print("Mp = {d:.6}\n", .{Mp.toDegrees().deg});
+
+        // Equation of the center (8.6.2)
+        const Ec = Angle.fromRadians(2 * e * M.sin()).reduce360();
+        // std.debug.print("Ec = {d:.6}\n", .{Ec.toDegrees().deg});
+
+        // True anomaly (8.6.3)
+        const vp = Angle.fromDegrees(M.toDegrees().deg + Ec.toDegrees().deg).reduce360();
+        // std.debug.print("vp = {d:.6}\n", .{vp.toDegrees().deg});
+
+        // Heliocentric ecliptic longitude (8.6.4)
+        const Lon = Angle.fromDegrees(vp.toDegrees().deg + pb.lon_at_peri).reduce360();
+
+        // Heliocentric ecliptic latidude (8.6.5)
+        const delta_lon = Angle.fromDegrees(Lon.toDegrees().deg - pb.lon_asc_node); 
+        const Lat = Angle.asin(delta_lon.sin() * @sin(pb.inclination * deg_to_rad)).reduce360();
+        // std.debug.print("Lop = {d:.6}, Lap = {d:.6}\n", .{Lop.toDegrees().deg, Lap.toDegrees().deg});
+
+        // Radius vector (8.6.6)
+        const R = (pb.semi_major_axis_au * (1 - e * e)) / (1 + e * vp.cos());
+
+        return .{
+            .lat = Lat,
+            .lon = Lon,
+            .v = vp,
+            .r = R,
+        };
+    }
+
+    pub fn toString(self: HelioCoord, allocator: Allocator) ![]const u8 {
+        return try std.fmt.allocPrint(allocator, "Λ={d:.6}°, L={d:.6}°, ν={d:.6}°, R={d:.6} AU", .{
+            self.lat.toDegrees().deg,
+            self.lon.toDegrees().deg,
+            self.v.toDegrees().deg,
+            self.r
+        });
+    }
+};
+
+/// Return the horizontal coordinates of a celestial body for a given date (LCT) and location
+pub fn bodyHorCoord(pb: *const Body, date: AstroDate, earth: *const HelioCoord, loc: GeoCoord) HorCoord {
+    const lst_hrs = ast.lctToLST(date, loc.lon).hours;
+    const eq = bodyRaDec(pb, date, earth);
+    return eq.toHor(loc.lat, lst_hrs);
+}
+
+/// Return the equatorial coordinates of a celestial body for a given date (LCT)
+pub fn bodyRaDec(pb: *const Body, date: AstroDate, earth: *const HelioCoord) RaDec {
+    return bodyEcliptic(pb, date, earth).toRaDec();
+}
+
+/// Return the ecliptic coordinates of a celestial body for a given date (LCT)
+pub fn bodyEcliptic(pb: *const Body, date: AstroDate, earth: *const HelioCoord) EclipticCoord {
+    // Body's heliocentric coordinates
+    const body = HelioCoord.fromDate(pb, date);
+
+    // Adjustment to ecliptic longitude (8.6.7)
+    var delta_lon = Angle.fromDegrees(body.lon.toDegrees().deg - pb.lon_asc_node);
+    var y = delta_lon.sin() * @cos(pb.inclination * deg_to_rad);
+    var x = delta_lon.cos();
+    const L = Angle.fromDegrees(pb.lon_asc_node + Angle.atan2(y,x).toDegrees().deg).reduce360();
+
+    // Geocentric ecliptic longitude
+    delta_lon = Angle.fromDegrees(earth.lon.toDegrees().deg - L.toDegrees().deg);
+    const sin_lon = delta_lon.sin();
+    const cos_lon = delta_lon.cos();
+    const cos_lat = body.lat.cos();
+    const tan_lat = body.lat.tan();
+    var lon: Angle = undefined;
+    if (pb.semi_major_axis_au < 1.0) {
+        // Inferior planet (8.6.8)
+        y = body.r * cos_lat * sin_lon;
+        x = earth.r - body.r * cos_lat * cos_lon;
+        lon = Angle.fromDegrees(180 + earth.lon.toDegrees().deg + Angle.atan2(y,x).toDegrees().deg).reduce360();
+    } else {
+        // Superior planet (8.6.9)
+        y = -earth.r * sin_lon;
+        x = body.r * cos_lat - earth.r * cos_lon;
+        lon = Angle.fromDegrees(L.toDegrees().deg + Angle.atan2(y,x).toDegrees().deg).reduce360();
+    }
+    // Geocentric ecliptic latitude (8.6.10)
+    delta_lon = Angle.fromDegrees(lon.toDegrees().deg - L.toDegrees().deg);
+    y = body.r * cos_lat * tan_lat * delta_lon.sin();
+    x = -earth.r * sin_lon;
+    const lat = Angle.atan(y / x);  // [-90°, +90°]
+
+    return .{
+        .lat = lat,
+        .lon = lon,
+    };
+}

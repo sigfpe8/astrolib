@@ -1,19 +1,34 @@
 const std = @import("std");
 const lib = @import("astrolib");
-const ang = lib.ang;
-const ast = lib.ast;
-const crd = lib.crd;
-const orb = lib.orb;
-const sol = lib.sol;
 
+const orb = lib.orb;
+
+const ang = lib.ang;
 const Angle = ang.Angle;
 
+const ast = lib.ast;
 const AstroDate = ast.AstroDate;
 const Year = ast.Year;
 const Month = ast.Month;
 const Day = ast.Day;
 
+const crd = lib.crd;
 const GeoCoord = crd.GeoCoord;
+const RaDec = crd.RaDec;
+const HorCoord = crd.HorCoord;
+const EclipticCoord = crd.EclipticCoord;
+
+const sol = lib.sol;
+const HelioCoord = sol.HelioCoord;
+const Body = sol.Body;
+const bodies = sol.bodies;
+const Sun = sol.Sun;
+const Moon = sol.Moon;
+const Mercury = sol.Mercury;
+const Pluto = sol.Pluto;
+const Earth = sol.Earth;
+const Venus = sol.Venus;
+const Saturn = sol.Saturn;
 
 const expect = std.testing.expect;
 const expectApproxEqAbs = std.testing.expectApproxEqAbs;
@@ -212,3 +227,77 @@ test "moonPhase" {
     try expectApproxEqAbs(10.661_240, phase.age_days, 0.000_001);
     try expect(std.mem.eql(u8, phase.name, "Waxing Gibbous"));
 }
+
+test "bodyHorCoord" {
+    const date = AstroDate.fromDateAndHours(2016, 1, 3, 22, ast.tzEST);
+    const loc = GeoCoord.init(Angle.fromDegrees(38),   // New York City
+                                        Angle.fromDegrees(-78));
+    const earth = HelioCoord.fromDate(&bodies[Earth], date);
+
+    var hor: HorCoord = undefined;
+
+    hor = sol.bodyHorCoord(&bodies[Venus], date, &earth, loc);
+    var hor_str = try hor.toString(allocator);
+    defer allocator.free(hor_str);
+    try expect(std.mem.eql(u8, hor_str, "h=-70°42′24″, A=17°08′10″"));
+    // std.debug.print("Venus        {s}\n", .{hor_str});
+    allocator.free(hor_str);
+
+    hor = sol.bodyHorCoord(&bodies[Saturn], date, &earth, loc);
+    hor_str = try hor.toString(allocator);
+    try expect(std.mem.eql(u8, hor_str, "h=-72°32′15″, A=0°07′56″"));
+    // std.debug.print("Saturn       {s}\n", .{hor_str});
+}
+
+test "bodyRaDec" {
+    const date = AstroDate.fromDateAndHours(2016, 1, 3, 22, ast.tzEST);
+    const earth = HelioCoord.fromDate(&bodies[Earth], date);
+
+    var radec: RaDec = undefined;
+
+    radec = sol.bodyRaDec(&bodies[Venus], date, &earth);
+    var radec_str = try radec.toString(allocator);
+    defer allocator.free(radec_str);
+    // std.debug.print("        Venus:  {s}\n", .{radec_str});
+    // std.debug.print("        ra={d:.6}, dec={d:.6}\n", .{radec.ra.toHours().hrs, radec.dec.toDegrees().deg});
+    try expect(std.mem.eql(u8, radec_str, "α=16ʰ16ᵐ59ˢ, δ=-19°24′26″"));
+    allocator.free(radec_str);
+
+    radec = sol.bodyRaDec(&bodies[Saturn], date, &earth);
+    radec_str = try radec.toString(allocator);
+    // std.debug.print("        Saturn: {s}\n", .{radec_str});
+    // std.debug.print("        ra={d:.6}, dec={d:.6}\n", .{radec.ra.toHours().hrs, radec.dec.toDegrees().deg});
+    try expect(std.mem.eql(u8, radec_str, "α=16ʰ40ᵐ31ˢ, δ=-20°32′15″"));
+}
+
+test "bodyEcliptic" {
+    const date = AstroDate.fromDateAndHours(2016, 1, 3, 22, ast.tzEST);
+    const earth = HelioCoord.fromDate(&bodies[Earth], date);
+
+    const venus = sol.bodyEcliptic(&bodies[Venus], date, &earth);
+    const venus_str = try venus.toString(allocator);
+    defer allocator.free(venus_str);
+    // std.debug.print("Venus:  {s}\n", .{venus_str});
+    try expect(std.mem.eql(u8, venus_str, "β=00ʰ07ᵐ35ˢ, λ=245°47′34″"));
+
+    const saturn = sol.bodyEcliptic(&bodies[Saturn], date, &earth);
+    const saturn_str = try saturn.toString(allocator);
+    defer allocator.free(saturn_str);
+    // std.debug.print("Saturn: {s}\n", .{saturn_str});
+    try expect(std.mem.eql(u8, saturn_str, "β=00ʰ06ᵐ31ˢ, λ=251°25′54″"));
+}
+
+// test "Bodies" {
+//     const sun = &bodies[Sun];
+//     const moon = &bodies[Moon];
+//     const pluto = &bodies[Pluto];
+
+//     std.debug.print("Sun:  mass={d}, grav_parm={d}\n", .{sun.mass, sun.grav_parm});
+//     std.debug.print("Moon: mass={d}, grav_parm={d}\n", .{moon.mass, moon.grav_parm});
+//     std.debug.print("{s}: inclination = {d}, longitude at epoch = {d:.6}\n", .{pluto.name,pluto.inclination,pluto.lon_at_epoch});
+
+//     for (bodies[Mercury..], 0..) |*p, i| {
+//         std.debug.print("{d:>2} - {s}\n", .{i, p.name});
+//     }
+// }
+
