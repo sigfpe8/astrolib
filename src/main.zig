@@ -48,6 +48,10 @@ pub fn main() !void {
     std.debug.print("  Sunrise = {s}\n", .{strr});
     std.debug.print("  Sunset  = {s}\n", .{strs});
 
+    const radec = sol.sunRaDec(date);
+    const radec_str = try radec.toString(allocator);
+    defer allocator.free(radec_str);
+    std.debug.print("Sun position: {s}\n", .{radec_str});
 
     const obj = RaDec.init(Angle.fromHMS(HMS{.sign='+',.hour=5,.min=55,.sec=10.3053}),  // Betelgeuse
                                   Angle.fromDMS(DMS{.sign='+',.deg=7,.min=24,.sec=25.426}));
@@ -69,5 +73,25 @@ pub fn main() !void {
     std.debug.print("  Rise Time: {s}, Azimuth: {s}\n", .{rise_lct_str, rise_az_str});
     std.debug.print("  Set Time:  {s}, Azimuth: {s}\n", .{set_lct_str, set_az_str});
 
+    try allPlanetPositions(allocator, date);
 }
 
+const HelioCoord = sol.HelioCoord;
+const Body = sol.Body;
+const bodies = sol.bodies;
+const Earth = sol.Earth;
+const Mercury = sol.Mercury;
+
+fn allPlanetPositions(allocator: std.mem.Allocator, date: AstroDate) !void {
+    const earth = sol.HelioCoord.fromDate(&bodies[Earth], date);
+    const date_str = try date.toString(allocator);
+    defer allocator.free(date_str);
+    std.debug.print("\nPlanet positions for date: {s}\n", .{date_str});
+
+    for (bodies[Mercury..]) |*p| {
+        const radec = sol.bodyRaDec(p, date, &earth);
+        const radec_str = try radec.toString(allocator);
+        std.debug.print("{s:10} {s}\n", .{p.name, radec_str});
+        allocator.free(radec_str);
+    }
+}
