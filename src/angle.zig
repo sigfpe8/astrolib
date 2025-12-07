@@ -69,7 +69,31 @@ pub const Angle = union(enum) {
         return Angle{ .hrs = hours };
     }
 
-    pub inline fn toDegrees(self: Angle) Angle {
+    pub inline fn toDegrees(self: Angle) f64 {
+        switch (self) {
+            .deg => return self.deg,
+            .rad => return self.rad * rad_to_deg,
+            .hrs => return self.hrs * hrs_to_deg,
+        }
+    }
+
+    pub inline fn toRadians(self: Angle) f64 {
+        switch (self) {
+            .deg => return self.deg * deg_to_rad,
+            .rad => return self.rad,
+            .hrs => return self.hrs * hrs_to_rad,
+        }
+    }
+    
+    pub inline fn toHours(self: Angle) f64 {
+        switch (self) {
+            .deg => return self.deg * deg_to_hrs,
+            .rad => return self.rad * rad_to_hrs,
+            .hrs => return self.hrs,
+        }
+    }
+
+    pub inline fn asDegrees(self: Angle) Angle {
         switch (self) {
             .deg => return self,
             .rad => return Angle.fromDegrees(self.rad * rad_to_deg),
@@ -77,7 +101,7 @@ pub const Angle = union(enum) {
         }
     }
 
-    pub inline fn toRadians(self: Angle) Angle {
+    pub inline fn asRadians(self: Angle) Angle {
         switch (self) {
             .deg => return Angle.fromRadians(self.deg * deg_to_rad),
             .rad => return self,
@@ -85,7 +109,7 @@ pub const Angle = union(enum) {
         }
     }
     
-    pub inline fn toHours(self: Angle) Angle {
+    pub inline fn asHours(self: Angle) Angle {
         switch (self) {
             .deg => return Angle.fromHours(self.deg * deg_to_hrs),
             .rad => return Angle.fromHours(self.rad * rad_to_hrs),
@@ -94,7 +118,7 @@ pub const Angle = union(enum) {
     }
 
     pub fn sin(self: Angle) f64 {
-        return std.math.sin(self.toRadians().rad);
+        return std.math.sin(self.toRadians());
     }
 
     pub fn asin(ang: f64) Angle {
@@ -102,7 +126,7 @@ pub const Angle = union(enum) {
     }
 
     pub fn cos(self: Angle) f64 {
-        return std.math.cos(self.toRadians().rad);
+        return std.math.cos(self.toRadians());
     }
 
     pub fn acos(ang: f64) Angle {
@@ -110,7 +134,7 @@ pub const Angle = union(enum) {
     }
 
     pub fn tan(self: Angle) f64 {
-        return std.math.tan(self.toRadians().rad);
+        return std.math.tan(self.toRadians());
     }
 
     pub fn atan(ang: f64) Angle {

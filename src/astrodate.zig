@@ -695,7 +695,7 @@ pub fn lstToGST(lst: AstroDate, longitude_deg: f64) AstroDate {
 pub fn lctToLST(lct: AstroDate, lon: Longitude) AstroDate {
     const ut = lctToUT(lct);
     const gst = utToGST(ut);
-    var lst = gstToLST(gst, lon.toDegrees().deg);
+    var lst = gstToLST(gst, lon.toDegrees());
     // Preserve original date
     lst.year = lct.year;
     lst.month = lct.month;
@@ -705,7 +705,7 @@ pub fn lctToLST(lct: AstroDate, lon: Longitude) AstroDate {
 
 /// Convert LST (Local Sidereal Time) to LCT (Local Civil Time)
 pub fn lstToLCT(lst: AstroDate, lon: Longitude, tz: TimeZone) AstroDate {
-    const gst = lstToGST(lst, lon.toDegrees().deg);
+    const gst = lstToGST(lst, lon.toDegrees());
     const ut = gstToUT(gst);
     var lct = utToLCT(ut, tz);
     // Preserve original date

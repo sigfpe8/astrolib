@@ -143,10 +143,10 @@ pub const GeoCoord = struct {
     pub fn distanceTo(self: GeoCoord, other: GeoCoord) f64 {
         // Using haversine formula (ChatGPT)
         const R = 6371_000.0; // Earth radius in meters (mean)
-        const lat1 = self.lat.toRadians().rad;
-        const lon1 = self.lon.toRadians().rad;
-        const lat2 = other.lat.toRadians().rad;
-        const lon2 = other.lon.toRadians().rad;
+        const lat1 = self.lat.toRadians();
+        const lon1 = self.lon.toRadians();
+        const lat2 = other.lat.toRadians();
+        const lon2 = other.lon.toRadians();
 
         const dlat = lat2 - lat1;
         const dlon = lon2 - lon1;
@@ -176,7 +176,7 @@ pub const HorCoord = struct {
     /// Convert horizontal coordinates to equatorial coordinates in RA/Dec system.
     pub fn toRaDec(self: HorCoord, lat: Latitude, lst_hrs: f64) RaDec {
         const hadec = self.toHaDec(lat);
-        const ra = Angle.fromHours(@mod(lst_hrs - hadec.ha.toHours().hrs, 24.0));
+        const ra = Angle.fromHours(@mod(lst_hrs - hadec.ha.toHours(), 24.0));
         return RaDec.init(
             ra,
             hadec.dec
@@ -199,7 +199,7 @@ pub const HorCoord = struct {
         const dec = Angle.asin(sin_dec);
 
         const cos_ha = (sin_alt - sin_lat * sin_dec) / (cos_lat * dec.cos());
-        var ha = Angle.acos(cos_ha).toHours();
+        var ha = Angle.acos(cos_ha).asHours();
 
         if (sin_az > 0.0) {
             // ha = 360 - ha;
@@ -241,7 +241,7 @@ pub const HaDec = struct {
 
     /// Convert to horizontal coordinates.
     pub fn toHor(self: HaDec, lat: Latitude) HorCoord {
-        const ha = self.ha.toRadians();
+        const ha = self.ha.asRadians();
 
         const sin_dec = self.dec.sin();
         const cos_dec = self.dec.cos();
@@ -253,7 +253,7 @@ pub const HaDec = struct {
         const alt = Angle.asin(sin_alt);
 
         const cos_az = (sin_dec - sin_alt * sin_lat) / (cos_lat * alt.cos());
-        var az = Angle.acos(cos_az).toDegrees();
+        var az = Angle.acos(cos_az).asDegrees();
 
         const sin_ha = ha.sin();
         if (sin_ha > 0.0) {
@@ -297,7 +297,7 @@ pub const RaDec = struct {
     pub fn toHor(self: RaDec, lat: Latitude, lst_hrs: f64) HorCoord {
         const ha_equa = HaDec.init(
             // Convert RA to HA: HA = LST - RA
-            Angle.fromHours(@mod(lst_hrs - self.ra.toHours().hrs, 24.0)),
+            Angle.fromHours(@mod(lst_hrs - self.ra.toHours(), 24.0)),
             self.dec
         );
         return ha_equa.toHor(lat);
@@ -339,7 +339,7 @@ pub const RaDec = struct {
         const sin_dec0 = epoch.gdec0.sin();
         const cos_dec0 = epoch.gdec0.cos();
 
-        const ra = Angle.fromHours(self.ra.toHours().hrs - epoch.gra0.toHours().hrs);
+        const ra = Angle.fromHours(self.ra.toHours() - epoch.gra0.toHours());
         const sin_ra = ra.sin();
         const cos_ra = ra.cos();
 
@@ -348,8 +348,8 @@ pub const RaDec = struct {
         const y = sin_dec - sin_lat * sin_dec0;
         const x = cos_dec * sin_ra * cos_dec0;
 
-        var lon = Angle.atan2(y, x).toDegrees();
-        lon = Angle.fromDegrees(@mod(lon.deg + epoch.glon0.toDegrees().deg, 360.0));
+        var lon = Angle.atan2(y, x).asDegrees();
+        lon = Angle.fromDegrees(@mod(lon.deg + epoch.glon0.toDegrees(), 360.0));
 
         return GalacticCoord.init(
             lat,
@@ -370,8 +370,8 @@ pub const RaDec = struct {
         const delta_dec = nd * self.ra.cos() * d;
 
         return RaDec.init(
-            Angle.fromHours(self.ra.toHours().hrs + delta_ra / 3600.0),
-            Angle.fromDegrees(self.dec.toDegrees().deg + delta_dec / 3600.0)
+            Angle.fromHours(self.ra.toHours() + delta_ra / 3600.0),
+            Angle.fromDegrees(self.dec.toDegrees() + delta_dec / 3600.0)
         );
     }
 
@@ -454,7 +454,7 @@ pub const GalacticCoord = struct {
         // Formulas from "Celestial Calculations" by J.L Lawrence, Chapter 4
         //   (4.9.1) sin δ = cos b cos δ₀ * sin(l - l₀) + sin b sin δ₀
         //   (4.9.2) ɑ = atan2(cos b * cos(l - l₀), sin b * cos δ₀ - cos b * sin δ₀ * sin(l - l₀)) + ɑ₀
-        const lon = Angle.fromDegrees(self.lon.toDegrees().deg - epoch.glon0.toDegrees().deg); // l - l₀
+        const lon = Angle.fromDegrees(self.lon.toDegrees() - epoch.glon0.toDegrees()); // l - l₀
         const sin_lat = self.lat.sin();
         const cos_lat = self.lat.cos();
 
@@ -470,7 +470,7 @@ pub const GalacticCoord = struct {
         const y = cos_lat * cos_lon;
         const x = sin_lat * cos_dec0 - cos_lat * sin_dec0 * sin_lon;
         var ra = Angle.atan2(y, x);
-        ra = Angle.fromHours(@mod(ra.toHours().hrs + epoch.gra0.toHours().hrs, 24.0));
+        ra = Angle.fromHours(@mod(ra.toHours() + epoch.gra0.toHours(), 24.0));
 
         return RaDec.init(
             ra,
@@ -506,11 +506,11 @@ pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
         return CoordError.ObjNeverRises;
     }
 
-    const h2 = Angle.acos(-h1).toHours();
+    const h2 = Angle.acos(-h1).asHours();
 
     // Rise tima and azimuth of object
     const rise_az = Angle.acos(ar);
-    var rise_hrs = 24.0 + obj.ra.toHours().hrs - h2.hrs;
+    var rise_hrs = 24.0 + obj.ra.toHours() - h2.hrs;
     if (rise_hrs > 24) {
         rise_hrs -= 24;
     }
@@ -518,8 +518,8 @@ pub fn riseAndSet(loc: GeoCoord, date: AstroDate, obj: RaDec) !RiseAndSet {
     const rise_lct = ad.lstToLCT(rise_lst, loc.lon, date.tz);
 
     // Set time and azimuth of object
-    const set_az  = Angle.fromDegrees(360.0 - rise_az.toDegrees().deg);
-    var set_hrs = obj.ra.toHours().hrs + h2.hrs;
+    const set_az  = Angle.fromDegrees(360.0 - rise_az.toDegrees());
+    var set_hrs = obj.ra.toHours() + h2.hrs;
     if (set_hrs > 24) {
         set_hrs -= 24;
     }
@@ -550,16 +550,16 @@ pub fn riseAndSetLST(loc: GeoCoord, obj: RaDec) !RiseAndSetLST {
         return CoordError.ObjNeverRises;
     }
 
-    const h2 = Angle.acos(-h1).toHours();
+    const h2 = Angle.acos(-h1).asHours();
 
     // Rise time of object
-    var rise_lst = 24.0 + obj.ra.toHours().hrs - h2.hrs;
+    var rise_lst = 24.0 + obj.ra.toHours() - h2.hrs;
     if (rise_lst > 24) {
         rise_lst -= 24;
     }
 
     // Set time of object
-    var set_lst = obj.ra.toHours().hrs + h2.hrs;
+    var set_lst = obj.ra.toHours() + h2.hrs;
     if (set_lst > 24) {
         set_lst -= 24;
     }

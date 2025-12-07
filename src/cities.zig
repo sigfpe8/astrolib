@@ -34,10 +34,10 @@ pub const GeoCoord = struct {
     pub fn distanceTo(self: GeoCoord, other: GeoCoord) f64 {
         // Using haversine formula (ChatGPT)
         const R = 6371_000.0; // Earth radius in meters (mean)
-        const lat1 = self.lat.toRadians().rad;
-        const lon1 = self.lon.toRadians().rad;
-        const lat2 = other.lat.toRadians().rad;
-        const lon2 = other.lon.toRadians().rad;
+        const lat1 = self.lat.toRadians();
+        const lon1 = self.lon.toRadians();
+        const lat2 = other.lat.toRadians();
+        const lon2 = other.lon.toRadians();
 
         const dlat = lat2 - lat1;
         const dlon = lon2 - lon1;
@@ -176,8 +176,8 @@ test "Cities and Coordinates" {
             .{
                 c.city,
                 c.country,
-                c.coord.lat.toDegrees().deg,
-                c.coord.lon.toDegrees().deg,
+                c.coord.lat.toDegrees(),
+                c.coord.lon.toDegrees(),
             },
         );
     }

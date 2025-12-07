@@ -101,7 +101,7 @@ pub fn sunEclipticCoord(date: AstroDate) EclipticCoord {
     const M = sunMeanAnomaly(date);
     
     // Equation of the center
-    // const Ec = Angle.fromRadians(2 * e * M.sin()).toDegrees();
+    // const Ec = Angle.fromRadians(2 * e * M.sin()).asDegrees();
     // True anomaly
     // const v = Angle.fromDegrees(M.deg + Ec.deg).reduce360();
 
@@ -109,7 +109,7 @@ pub fn sunEclipticCoord(date: AstroDate) EclipticCoord {
     const v = orb.trueAnomalyFromKeplerTan(e, M);
 
     // Ecliptic longitude    (λ = ν + ϖ)
-    const lon = Angle.fromDegrees(v.toDegrees().deg + crd.epoch.sun_elong.toDegrees().deg).reduce360();
+    const lon = Angle.fromDegrees(v.toDegrees() + crd.epoch.sun_elong.toDegrees()).reduce360();
     // Ecliptic coordinates
     return EclipticCoord.init(Angle.fromDegrees(0), lon);
 }
@@ -122,14 +122,14 @@ pub fn sunMeanAnomaly(date: AstroDate) Angle {
     const De = jd - jde;
 
     return Angle.fromDegrees((360.0 * De) / 365.242_191 + 
-                                crd.epoch.sun_elon.toDegrees().deg -
-                                crd.epoch.sun_elong.toDegrees().deg).reduce360();
+                                crd.epoch.sun_elon.toDegrees() -
+                                crd.epoch.sun_elong.toDegrees()).reduce360();
 }
 
 /// Return approximate local time for sunrise and sunset (Lawrence, 2018)
 pub fn sunRiseAndSet(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     const ec1 = sunEclipticCoord(date.midnight());
-    const lon1 = ec1.lon.toDegrees().deg;
+    const lon1 = ec1.lon.toDegrees();
     const equ1 = ec1.toRaDec();
     const lst1 = crd.riseAndSetLST(loc, equ1) catch unreachable;
     const rise_lst1 = lst1.rise_lst;
@@ -166,7 +166,7 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     // n = number of days since Jan 1st, 2000 12:00
     const n = std.math.ceil(J - 2_451_545.0 + 0.000_8);
     // Mean solar time
-    const Js = n - (loc.lon.toDegrees().deg / 360);
+    const Js = n - (loc.lon.toDegrees() / 360);
     // Mean solar anomaly
     // const M = @mod((357.529_1 + 0.985_600_28 * Js), 360.0);
     const M = @mod(357.529_1 + 0.985_600_28 * Js, 360.0);
@@ -182,8 +182,8 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     const sin_dec = @sin(lor) * @sin(23.439_8 * pi / 180.0);            // [-1, 1]
     const cos_dec = std.math.sqrt(1.0 - sin_dec * sin_dec);    // [0, 1]
     // Hour angle
-    const cos_w0 = (@sin(-0.833 * pi / 180) - @sin(loc.lat.toRadians().rad) * sin_dec) /
-                   (@cos(loc.lat.toRadians().rad) * cos_dec);
+    const cos_w0 = (@sin(-0.833 * pi / 180) - @sin(loc.lat.toRadians()) * sin_dec) /
+                   (@cos(loc.lat.toRadians()) * cos_dec);
     // const w0 = std.math.acos(cos_w0) * 180 / pi;
     // const w = w0 / 360.0;
     const w = std.math.acos(cos_w0) / two_pi;
@@ -226,7 +226,7 @@ pub fn moonMeanAnomaly(date: AstroDate) Angle {
     var lon = Angle.fromDegrees(13.176_339_686 * De + 218.316_433).reduce360();
 
     // Moon's uncorrected mean anomaly (7.3.3)
-    return Angle.fromDegrees(lon.toDegrees().deg - 0.111_404_1 * De - 83.353_451).reduce360();
+    return Angle.fromDegrees(lon.toDegrees() - 0.111_404_1 * De - 83.353_451).reduce360();
 }
 
 /// Return the Moon's ecliptic coordinates for a given date (LCT)
@@ -244,7 +244,7 @@ pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
     var node_lon = Angle.fromDegrees(125.044_522 - 0.052_953_9 * De).reduce360();
 
     // Moon's uncorrected mean anomaly (7.3.3)
-    const Mm = Angle.fromDegrees(lon.toDegrees().deg - 0.111_404_1 * De - 83.353_451).reduce360();
+    const Mm = Angle.fromDegrees(lon.toDegrees() - 0.111_404_1 * De - 83.353_451).reduce360();
 
     // Sun's position and Mean anomaly
     const sun = sunEclipticCoord(date);
@@ -252,31 +252,31 @@ pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
 
     // Corrections to the Moon's anomaly (all in degrees) (7.3.4-7.3.6)
     const Ae = 0.1858 * Ms.sin();
-    const Ev = 1.2739 * @sin(2 * (lon.toRadians().rad - sun.lon.toRadians().rad) - Mm.toRadians().rad);
-    const Ca = Mm.toDegrees().deg + Ev - Ae - 0.37 * Ms.sin();
+    const Ev = 1.2739 * @sin(2 * (lon.toRadians() - sun.lon.toRadians()) - Mm.toRadians());
+    const Ca = Mm.toDegrees() + Ev - Ae - 0.37 * Ms.sin();
 
     // Moon's true anomaly (7.3.7)
     const vm = 6.2886 * @sin(Ca * pi / 180.0) + 0.214 * @sin(2 * Ca * pi / 180.0);
-    lon = Angle.fromDegrees(lon.toDegrees().deg + Ev + vm - Ae).reduce360();  // λ' (7.3.9)
+    lon = Angle.fromDegrees(lon.toDegrees() + Ev + vm - Ae).reduce360();  // λ' (7.3.9)
     // Variation correction (7.3.8)
-    const V = 0.6583 * @sin(2 * (lon.toRadians().rad - sun.lon.toRadians().rad));
+    const V = 0.6583 * @sin(2 * (lon.toRadians() - sun.lon.toRadians()));
 
-    lon = Angle.fromDegrees(lon.toDegrees().deg + V).reduce360();   // λt (7.3.10)
+    lon = Angle.fromDegrees(lon.toDegrees() + V).reduce360();   // λt (7.3.10)
 
     // Corrected longitude of the ascending node (7.3.11)
-    node_lon = Angle.fromDegrees(node_lon.toDegrees().deg - 0.16 * Ms.sin()).reduce360();
+    node_lon = Angle.fromDegrees(node_lon.toDegrees() - 0.16 * Ms.sin()).reduce360();
 
     // Moon's ecliptic latitude and longitude (7.3.12-7.3.13)
     const e_rad = 5.145_396_4 * deg_to_rad;
     const sin_e = @sin(e_rad);
     const cos_e = @cos(e_rad);
-    const delta_lon = lon.toRadians().rad - node_lon.toRadians().rad;
+    const delta_lon = lon.toRadians() - node_lon.toRadians();
     const sin_lon = @sin(delta_lon);
     const y = sin_lon * cos_e;
     const x = @cos(delta_lon);
     const T = Angle.atan2(y, x);
 
-    lon = Angle.fromDegrees(T.toDegrees().deg + node_lon.toDegrees().deg).reduce360();
+    lon = Angle.fromDegrees(T.toDegrees() + node_lon.toDegrees()).reduce360();
     const lat = Angle.asin(sin_lon * sin_e);
 
     return EclipticCoord.init(lat, lon);
@@ -296,19 +296,19 @@ pub fn moonPhase(date: AstroDate) MoonPhase {
     const sun = sunEclipticCoord(date);
 
     // Elongation angle or age (7.6.5)
-    const elong = Angle.acos(@cos(moon.lon.toRadians().rad - sun.lon.toRadians().rad) * moon.lat.cos()).reduce360();
-    const days = (elong.toDegrees().deg / 360.0) * 29.530_6;
+    const elong = Angle.acos(@cos(moon.lon.toRadians() - sun.lon.toRadians()) * moon.lat.cos()).reduce360();
+    const days = (elong.toDegrees() / 360.0) * 29.530_6;
 
     // Phase angle (7.6.6)
     const sin_mm = Mm.sin();
     const t1 = (1 - 0.054_9 * sin_mm);
     const t2 = (1 - 0.016_7 * sin_mm);
-    const pa = 180 - elong.toDegrees().deg - 0.146_8 * (t1 / t2) * elong.sin();
+    const pa = 180 - elong.toDegrees() - 0.146_8 * (t1 / t2) * elong.sin();
 
     // Illumination fraction (7.6.7)
     const illum = (1 + @cos(pa * pi / 180.0)) * 0.5;
     
-    const name = phase_names[@intFromFloat(@trunc((elong.toDegrees().deg + 22.5) / 45.0))];
+    const name = phase_names[@intFromFloat(@trunc((elong.toDegrees() + 22.5) / 45.0))];
 
     return .{
         .elong = elong,
@@ -585,23 +585,23 @@ pub const HelioCoord = struct {
         // std.debug.print("JD = {d:.3}, De = {d:.3}\n", .{jd, De});
 
         const M = Angle.fromDegrees((360.0 * De) / (365.242_191 * pb.period) + pb.lon_at_epoch - pb.lon_at_peri).reduce360();
-        // std.debug.print("Mp = {d:.6}\n", .{Mp.toDegrees().deg});
+        // std.debug.print("Mp = {d:.6}\n", .{Mp.toDegrees()});
 
         // Equation of the center (8.6.2)
         const Ec = Angle.fromRadians(2 * e * M.sin()).reduce360();
-        // std.debug.print("Ec = {d:.6}\n", .{Ec.toDegrees().deg});
+        // std.debug.print("Ec = {d:.6}\n", .{Ec.toDegrees()});
 
         // True anomaly (8.6.3)
-        const vp = Angle.fromDegrees(M.toDegrees().deg + Ec.toDegrees().deg).reduce360();
-        // std.debug.print("vp = {d:.6}\n", .{vp.toDegrees().deg});
+        const vp = Angle.fromDegrees(M.toDegrees() + Ec.toDegrees()).reduce360();
+        // std.debug.print("vp = {d:.6}\n", .{vp.toDegrees()});
 
         // Heliocentric ecliptic longitude (8.6.4)
-        const Lon = Angle.fromDegrees(vp.toDegrees().deg + pb.lon_at_peri).reduce360();
+        const Lon = Angle.fromDegrees(vp.toDegrees() + pb.lon_at_peri).reduce360();
 
         // Heliocentric ecliptic latidude (8.6.5)
-        const delta_lon = Angle.fromDegrees(Lon.toDegrees().deg - pb.lon_asc_node); 
+        const delta_lon = Angle.fromDegrees(Lon.toDegrees() - pb.lon_asc_node); 
         const Lat = Angle.asin(delta_lon.sin() * @sin(pb.inclination * deg_to_rad)).reduce360();
-        // std.debug.print("Lop = {d:.6}, Lap = {d:.6}\n", .{Lop.toDegrees().deg, Lap.toDegrees().deg});
+        // std.debug.print("Lop = {d:.6}, Lap = {d:.6}\n", .{Lop.toDegrees(), Lap.toDegrees()});
 
         // Radius vector (8.6.6)
         const R = (pb.semi_major_axis_au * (1 - e * e)) / (1 + e * vp.cos());
@@ -616,9 +616,9 @@ pub const HelioCoord = struct {
 
     pub fn toString(self: HelioCoord, allocator: Allocator) ![]const u8 {
         return try std.fmt.allocPrint(allocator, "Λ={d:.6}°, L={d:.6}°, ν={d:.6}°, R={d:.6} AU", .{
-            self.lat.toDegrees().deg,
-            self.lon.toDegrees().deg,
-            self.v.toDegrees().deg,
+            self.lat.toDegrees(),
+            self.lon.toDegrees(),
+            self.v.toDegrees(),
             self.r
         });
     }
@@ -642,13 +642,13 @@ pub fn bodyEcliptic(pb: *const Body, date: AstroDate, earth: *const HelioCoord) 
     const body = HelioCoord.fromDate(pb, date);
 
     // Adjustment to ecliptic longitude (8.6.7)
-    var delta_lon = Angle.fromDegrees(body.lon.toDegrees().deg - pb.lon_asc_node);
+    var delta_lon = Angle.fromDegrees(body.lon.toDegrees() - pb.lon_asc_node);
     var y = delta_lon.sin() * @cos(pb.inclination * deg_to_rad);
     var x = delta_lon.cos();
-    const L = Angle.fromDegrees(pb.lon_asc_node + Angle.atan2(y,x).toDegrees().deg).reduce360();
+    const L = Angle.fromDegrees(pb.lon_asc_node + Angle.atan2(y,x).toDegrees()).reduce360();
 
     // Geocentric ecliptic longitude
-    delta_lon = Angle.fromDegrees(earth.lon.toDegrees().deg - L.toDegrees().deg);
+    delta_lon = Angle.fromDegrees(earth.lon.toDegrees() - L.toDegrees());
     const sin_lon = delta_lon.sin();
     const cos_lon = delta_lon.cos();
     const cos_lat = body.lat.cos();
@@ -658,15 +658,15 @@ pub fn bodyEcliptic(pb: *const Body, date: AstroDate, earth: *const HelioCoord) 
         // Inferior planet (8.6.8)
         y = body.r * cos_lat * sin_lon;
         x = earth.r - body.r * cos_lat * cos_lon;
-        lon = Angle.fromDegrees(180 + earth.lon.toDegrees().deg + Angle.atan2(y,x).toDegrees().deg).reduce360();
+        lon = Angle.fromDegrees(180 + earth.lon.toDegrees() + Angle.atan2(y,x).toDegrees()).reduce360();
     } else {
         // Superior planet (8.6.9)
         y = -earth.r * sin_lon;
         x = body.r * cos_lat - earth.r * cos_lon;
-        lon = Angle.fromDegrees(L.toDegrees().deg + Angle.atan2(y,x).toDegrees().deg).reduce360();
+        lon = Angle.fromDegrees(L.toDegrees() + Angle.atan2(y,x).toDegrees()).reduce360();
     }
     // Geocentric ecliptic latitude (8.6.10)
-    delta_lon = Angle.fromDegrees(lon.toDegrees().deg - L.toDegrees().deg);
+    delta_lon = Angle.fromDegrees(lon.toDegrees() - L.toDegrees());
     y = body.r * cos_lat * tan_lat * delta_lon.sin();
     x = -earth.r * sin_lon;
     const lat = Angle.atan(y / x);  // [-90°, +90°]

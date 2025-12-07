@@ -105,7 +105,7 @@ test "sunEclipticCoord" {
 //     const M = Angle.fromDegrees(180.0);
 //     const v = orb.trueAnomalyFromEqCtr(e, M);
 
-//     std.debug.print("M={d}, ta={d}\n", .{M.toDegrees().deg, v.toDegrees().deg});
+//     std.debug.print("M={d}, ta={d}\n", .{M.toDegrees(), v.toDegrees()});
 // }
 
 // test "keplerNewtonRaphson" {
@@ -114,7 +114,7 @@ test "sunEclipticCoord" {
 //     const M = Angle.fromDegrees(24.742896);
 //     const E = orb.keplerNewtonRaphson(e, M);
 
-//     std.debug.print("M={d}, E={d}\n", .{M.toDegrees().deg, E.toDegrees().deg});
+//     std.debug.print("M={d}, E={d}\n", .{M.toDegrees(), E.toDegrees()});
 // }
 
 // test "keplerSimple" {
@@ -123,20 +123,20 @@ test "sunEclipticCoord" {
 //     const M = Angle.fromDegrees(24.742896);
 //     const E = orb.keplerSimple(e, M);
 
-//     std.debug.print("M={d}, E={d}\n", .{M.toDegrees().deg, E.toDegrees().deg});
+//     std.debug.print("M={d}, E={d}\n", .{M.toDegrees(), E.toDegrees()});
 // }
 
 // fn printTrueAnomaly(e: f64, M: Angle) void {
-//     std.debug.print("\nComparing methods: e={d:.6}, M={d:.6}\n", .{e, M.toDegrees().deg});
+//     std.debug.print("\nComparing methods: e={d:.6}, M={d:.6}\n", .{e, M.toDegrees()});
 //     const v1 = orb.trueAnomalyFromEqCtr(e, M);
 //     const v2 = orb.trueAnomalyFromKeplerCos(e, M);
 //     const v3 = orb.trueAnomalyFromKeplerTan(e, M);
 //     const v4 = orb.trueAnomalyFromKeplerSeries(e, M);
 
-//     std.debug.print("EqCtr    {d:.6}\n", .{v1.toDegrees().deg});
-//     std.debug.print("KepCos   {d:.6}\n", .{v2.toDegrees().deg});
-//     std.debug.print("KepTan   {d:.6}\n", .{v3.toDegrees().deg});
-//     std.debug.print("KepSer   {d:.6}\n", .{v4.toDegrees().deg});
+//     std.debug.print("EqCtr    {d:.6}\n", .{v1.toDegrees()});
+//     std.debug.print("KepCos   {d:.6}\n", .{v2.toDegrees()});
+//     std.debug.print("KepTan   {d:.6}\n", .{v3.toDegrees()});
+//     std.debug.print("KepSer   {d:.6}\n", .{v4.toDegrees()});
 // }
 
 // test "Compare Methods" {
@@ -217,12 +217,12 @@ test "moonPhase" {
     const date = AstroDate.fromDateAndHMS(2015, 1, 1, 0, 0, 0, .{});
     const phase = sol.moonPhase(date);
 
-    // std.debug.print("Elongation={d:.6}\n", .{phase.elong.toDegrees().deg});
+    // std.debug.print("Elongation={d:.6}\n", .{phase.elong.toDegrees()});
     // std.debug.print("Illumination={d:.6}\n", .{phase.illum});
     // std.debug.print("Age days={d:.6}\n", .{phase.age_days});
     // std.debug.print("Phase name={s}\n", .{phase.name});
 
-    try expectApproxEqAbs(129.968_447, phase.elong.toDegrees().deg, 0.000_001);
+    try expectApproxEqAbs(129.968_447, phase.elong.toDegrees(), 0.000_001);
     try expectApproxEqAbs(0.821_907, phase.illum, 0.000_001);
     try expectApproxEqAbs(10.661_240, phase.age_days, 0.000_001);
     try expect(std.mem.eql(u8, phase.name, "Waxing Gibbous"));
@@ -259,14 +259,14 @@ test "bodyRaDec" {
     var radec_str = try radec.toString(allocator);
     defer allocator.free(radec_str);
     // std.debug.print("        Venus:  {s}\n", .{radec_str});
-    // std.debug.print("        ra={d:.6}, dec={d:.6}\n", .{radec.ra.toHours().hrs, radec.dec.toDegrees().deg});
+    // std.debug.print("        ra={d:.6}, dec={d:.6}\n", .{radec.ra.toHours(), radec.dec.toDegrees()});
     try expect(std.mem.eql(u8, radec_str, "α=16ʰ16ᵐ59ˢ, δ=-19°24′26″"));
     allocator.free(radec_str);
 
     radec = sol.bodyRaDec(&bodies[Saturn], date, &earth);
     radec_str = try radec.toString(allocator);
     // std.debug.print("        Saturn: {s}\n", .{radec_str});
-    // std.debug.print("        ra={d:.6}, dec={d:.6}\n", .{radec.ra.toHours().hrs, radec.dec.toDegrees().deg});
+    // std.debug.print("        ra={d:.6}, dec={d:.6}\n", .{radec.ra.toHours(), radec.dec.toDegrees()});
     try expect(std.mem.eql(u8, radec_str, "α=16ʰ40ᵐ31ˢ, δ=-20°32′15″"));
 }
 

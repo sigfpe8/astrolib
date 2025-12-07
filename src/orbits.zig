@@ -21,7 +21,7 @@ pub fn trueAnomalyFromEqCtr(
     M: Angle,   // Mean anomaly
 ) Angle {       // True anomaly
     // Calculate Ec with two terms from the infinite series (4.5.6)
-    const mr: f64 = M.toRadians().rad;
+    const mr: f64 = M.toRadians();
     const t1: f64 = 2 * e * std.math.sin(mr);
     const two_mr: f64 = mr * 2;
     const t2: f64 = (5 * e * e * 0.25) * std.math.sin(two_mr);
@@ -42,8 +42,8 @@ pub fn trueAnomalyFromKeplerTan(
 ) Angle {       // True anomaly (ν)
     const E = keplerNewtonRaphson(e, M);
     var v = trueAnomalyFromETan(e, E);
-    if (v.toDegrees().deg < 0) {
-        v = Angle.fromDegrees(v.toDegrees().deg + 360.0);
+    if (v.toDegrees() < 0) {
+        v = Angle.fromDegrees(v.toDegrees() + 360.0);
     }
     return v;
 }
@@ -69,7 +69,7 @@ pub fn keplerNewtonRaphson(
     e: f64,     // Orbit eccentricity
     M: Angle,   // Mean anomaly
 ) Angle {       // Eccentric anomaly (E)
-    const mr: f64 = M.toRadians().rad;// Mean anomaly in radians
+    const mr: f64 = M.toRadians();// Mean anomaly in radians
     var Ep: f64 = undefined;          // Previous estimate
     var Ei: f64 = undefined;          // Current estimate
     var i: usize = 1;                 // Current iteration
@@ -93,7 +93,7 @@ pub fn keplerSimple(
     e: f64,     // Orbit eccentricity
     M: Angle,   // Mean anomaly
 ) Angle {       // Eccentric anomaly (E)
-    const mr: f64 = M.toRadians().rad;// Mean anomaly in radians
+    const mr: f64 = M.toRadians();// Mean anomaly in radians
     var Ep: f64 = undefined;          // Previous estimate
     var Ei: f64 = undefined;          // Current estimate
     var i: usize = 1;                 // Current iteration
@@ -120,7 +120,7 @@ pub fn trueAnomalyFromETan(
     e: f64,     // Orbit eccentricity
     E: Angle,   // Eccentric anomaly
 ) Angle {       // True anomaly (ν)
-    const tan_half = std.math.sqrt((1+e)/(1-e)) * @tan(E.toRadians().rad/2);
+    const tan_half = std.math.sqrt((1+e)/(1-e)) * @tan(E.toRadians()/2);
     return Angle.fromRadians(std.math.atan(tan_half) * 2);
 }
 
@@ -141,7 +141,7 @@ pub fn trueAnomalyFromESeries(
     e: f64,     // Orbit eccentricity
     E: Angle,   // Eccentric anomaly
 ) Angle {       // True anomaly (ν)
-    const Er = E.toRadians().rad;
+    const Er = E.toRadians();
     const e2 = e * e;
     const e3 = e2 * e;
     const t1 = Er;

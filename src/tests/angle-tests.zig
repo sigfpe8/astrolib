@@ -12,8 +12,8 @@ const allocator = std.testing.allocator;
 
 test "toString" {
     const angle_deg = Angle.fromDegrees(45.0);
-    const angle_rad = angle_deg.toRadians();
-    const angle_hrs = angle_deg.toHours();
+    const angle_rad = angle_deg.asRadians();
+    const angle_hrs = angle_deg.asHours();
     const test_ang = Angle.fromHours(-14.598333);
     const one_sec = Angle.fromDMS(DMS{
         .sign = '-',
@@ -54,7 +54,7 @@ test "fromDMS" {
         .sec = 50.0,
     });
 
-    var deg = angle.toDegrees().deg;
+    var deg = angle.toDegrees();
     try expect(std.math.approxEqAbs(f64, deg, 30.2638888889, 0.00001));
 
     angle = Angle.fromDMS(DMS{
@@ -64,7 +64,7 @@ test "fromDMS" {
         .sec = 30.0,
     });
 
-    deg = angle.toDegrees().deg;
+    deg = angle.toDegrees();
     try expect(std.math.approxEqAbs(f64, deg,  -0.5083333,  0.00001));
 }
 
@@ -76,7 +76,7 @@ test "fromHMS" {
         .sec = 0.0,
     });
 
-    var hrs = angle.toHours().hrs;
+    var hrs = angle.toHours();
     try expect(std.math.approxEqAbs(f64, hrs, 5.5, 0.00001));
 
     angle = Angle.fromHMS(HMS{
@@ -86,7 +86,7 @@ test "fromHMS" {
         .sec = 30.0,
     });
 
-    hrs = angle.toHours().hrs;
+    hrs = angle.toHours();
     try expect(std.math.approxEqAbs(f64, hrs, -2.2583333, 0.00001));
 
     angle = Angle.fromHMS(HMS{
@@ -96,7 +96,7 @@ test "fromHMS" {
         .sec = 1.0,
     });
 
-    hrs = angle.toHours().hrs;
+    hrs = angle.toHours();
     try expect(std.math.approxEqAbs(f64, hrs, -0.0002777778, 0.0000001));
 }
 
