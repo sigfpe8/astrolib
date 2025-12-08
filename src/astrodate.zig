@@ -714,3 +714,28 @@ pub fn lstToLCT(lst: AstroDate, lon: Longitude, tz: TimeZone) AstroDate {
     lct.day = lst.day;
     return lct;
 }
+
+/// Return the number of Julian days from the epoch to the given date
+pub fn daysFromEpoch(date: AstroDate) f64 {
+    // Is this just an approximation to be used for planets calculations?
+    // Should the calculations for the planets also use TT?
+    const ut = lctToUT(date);
+    const jde = crd.epoch.jd;
+    const jd = ut.toJD();
+    const De = jd - jde;
+
+    return De;
+}
+
+/// Return the number of Julian days from the epoch to the given date (using TT)
+pub fn daysFromEpochTT(date: AstroDate) f64 {
+    // Used only by moon calculations
+    // Should the calculations for the sun and planets also use TT?
+    const ut = lctToUT(date);
+    const jde = crd.epoch.jd;
+    const tt = utToTT(ut);
+    const jd = tt.toJD();
+    const De = jd - jde;
+
+    return De;
+}

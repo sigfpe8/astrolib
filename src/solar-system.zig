@@ -116,10 +116,7 @@ pub fn sunEclipticCoord(date: AstroDate) EclipticCoord {
 
 /// Return the Sun's mean anomaly for a given date (LCT)
 pub fn sunMeanAnomaly(date: AstroDate) Angle {
-    const ut = ast.lctToUT(date);
-    const jde = crd.epoch.jd;
-    const jd = ut.toJD();
-    const De = jd - jde;
+    const De = ast.daysFromEpoch(date);
 
     return Angle.fromDegrees((360.0 * De) / 365.242_191 + 
                                 crd.epoch.sun_elon.toDegrees() -
@@ -217,10 +214,7 @@ pub fn moonRaDec(date: AstroDate) RaDec {
 
 /// Return the Moon's mean anomaly for a given date (LCT)
 pub fn moonMeanAnomaly(date: AstroDate) Angle {
-    const ut = ast.lctToUT(date);
-    const tt = ast.utToTT(ut);
-    const jd = tt.toJD();
-    const De = jd - crd.epoch.jd;
+    const De = ast.daysFromEpochTT(date);
 
     // Moon's uncorrected mean longitude (7.3.1)
     var lon = Angle.fromDegrees(13.176_339_686 * De + 218.316_433).reduce360();
@@ -232,11 +226,7 @@ pub fn moonMeanAnomaly(date: AstroDate) Angle {
 /// Return the Moon's ecliptic coordinates for a given date (LCT)
 pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
     // Algorithm by [Lawrence, 2018], p. 165
-
-    const ut = ast.lctToUT(date);
-    const tt = ast.utToTT(ut);
-    const jd = tt.toJD();
-    const De = jd - crd.epoch.jd;
+    const De = ast.daysFromEpochTT(date);
 
     // Moon's uncorrected mean longitude (7.3.1)
     var lon = Angle.fromDegrees(13.176_339_686 * De + 218.316_433).reduce360();
@@ -250,7 +240,7 @@ pub fn moonEclipticCoord(date: AstroDate) EclipticCoord {
     const sun = sunEclipticCoord(date);
     const Ms = sunMeanAnomaly(date);
 
-    // Corrections to the Moon's anomaly (all in degrees) (7.3.4-7.3.6)
+    // Corrections to the Moon's anomaly (all in degrees) (7.3.4 - 7.3.6)
     const Ae = 0.1858 * Ms.sin();
     const Ev = 1.2739 * @sin(2 * (lon.toRadians() - sun.lon.toRadians()) - Mm.toRadians());
     const Ca = Mm.toDegrees() + Ev - Ae - 0.37 * Ms.sin();
@@ -346,8 +336,8 @@ pub const Body = struct {
     eccentricity: f64,              // Orbital eccentricity (ellipses only)
     semi_major_axis_au: f64,        // Semi-major axis in AU
     semi_major_axis_km: f64,        // Semi-major axis in Km
-    ang_diam_sec: f64,             // Angular diameter in arc seconds
-    ang_diam_deg: f64,             // Angular diameter in degrees
+    ang_diam_sec: f64,              // Angular diameter in arc seconds
+    ang_diam_deg: f64,              // Angular diameter in degrees
     visual_mag: f64,                // Apparent visual magnitude at 1 AU
     grav_parm: f64,                 // In Km^3/s^2
     inclination: f64,               // Orbit inclination at epoch, in degrees
@@ -577,10 +567,7 @@ pub const HelioCoord = struct {
     r: f64,          // Radius vector (AU)
 
     pub fn fromDate(pb: *const Body, date: AstroDate) HelioCoord {
-        const ut = ast.lctToUT(date);
-        const jde = crd.epoch.jd;
-        const jd = ut.toJD();
-        const De = jd - jde;
+        const De = ast.daysFromEpoch(date);
         const e = pb.eccentricity;
         // std.debug.print("JD = {d:.3}, De = {d:.3}\n", .{jd, De});
 
