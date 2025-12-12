@@ -195,7 +195,7 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
 }
 
 /// Print to stdout a sideways graph of the equation of time for a given year
-pub fn equationOfTime(allocator: std.mem.Allocator, year: Year, interval: u32) !void {
+pub fn equationOfTime(allocator: Allocator, year: Year, interval: u32) !void {
     // Get stdout
     const BUFFER_SIZE = 2048;
     const buffer = try allocator.alloc(u8, BUFFER_SIZE);
@@ -238,6 +238,95 @@ pub fn deltaT(date: AstroDate) f64 {
     const ut = ast.gstToUT(gst);
     const mins = (ut.hours - 12) * 60;
     return mins;
+}
+
+/// Print to stdout a graph of the analemma for a given year, hour, and location
+pub fn analemma(allocator: Allocator, year: Year, hour: f64, interval: u32, loc: GeoCoord) !void {
+    // Get stdout
+    const BUFFER_SIZE = 2048;
+    const buffer = try allocator.alloc(u8, BUFFER_SIZE);
+    defer allocator.free(buffer);
+    var writer = std.fs.File.stdout().writer(buffer);
+    var stdout = &writer.interface;
+
+    const list = try sunPositions(allocator, year, hour, interval, loc);
+    defer allocator.free(list);
+
+    var min_xf = list[0][0];
+    var min_yf = list[0][1];
+    var max_xf = list[0][0];
+    var max_yf = list[0][1];
+
+    // Determine limits of the graph
+    for (list[1..]) |hor| {
+        const x = hor[0];
+        const y = hor[1];
+        min_xf = @min(min_xf,x);
+        min_yf = @min(min_yf,y);
+
+        max_xf = @max(max_xf,x);
+        max_yf = @max(max_yf,y);
+    }
+
+    const min_xi = @as(i32, @intFromFloat(@floor(min_xf))) - 1;
+    const min_yi = @as(i32, @intFromFloat(@floor(min_yf))) - 1;
+    const max_xi = @as(i32, @intFromFloat(@ceil(max_xf))) + 1;
+    const max_yi = @as(i32, @intFromFloat(@ceil(max_yf))) + 1;
+
+    // Include both ends + newline
+    const width  = @as(usize, @intCast(max_xi - min_xi + 2));
+    const height = @as(usize, @intCast(max_yi - min_yi + 1));
+
+    const graph = try allocator.alloc(u8, width * height);
+    defer allocator.free(graph);
+
+    // Initialize graph with spaces and newlines
+    var row: usize = 0;
+    var col: usize = 0;
+    while (row < height) : (row += 1) {
+        col = 0;
+        const idx: usize = row * width;
+        while (col < width) : (col += 1) {
+            graph[idx + col] = ' ';
+        }
+        graph[idx + width - 1] = '\n';
+    }
+
+    // Plot points
+    for (list) |hor| {
+        const x = hor[0];
+        const y = hor[1];
+        const xi = @as(i32, @intFromFloat(@round(x))) - min_xi;
+        const yi = max_yi + 1 - @as(i32, @intFromFloat(@round(y)));
+        row = @as(usize, @intCast(yi));
+        col = @as(usize, @intCast(xi));
+        const idx = row * width + col;
+        graph[idx] = '.';
+    }
+
+    // Print graph
+    try stdout.print("\nAnalemma for year {d} at {d:0<5.2} hours\n", .{year, hour});
+    try stdout.writeAll(graph);
+    try stdout.print("\n", .{});
+    try stdout.flush();
+}
+
+const Pair = struct { f64, f64 };
+
+fn sunPositions(allocator: Allocator, year: Year, hour: f64, interval: u32, loc: GeoCoord) ![]Pair {
+    var list: std.ArrayList(Pair) = .empty;
+    const delta_days = @min(@max(interval,1),30);   // [1,30]
+    var days: u32 = 1;
+
+    while (days < 366) : (days += delta_days) {
+        var date = AstroDate.fromYearAndDays(year, days);
+        date.hours = hour;
+        date.tz = ast.tzEST;
+        const hor = sunHorCoord(date, loc);
+        try list.append(allocator, .{hor.alt.toDegrees(), hor.az.toDegrees()});
+    }
+
+    return list.toOwnedSlice(allocator);
 }
 
 // --------------------------------------------------------------------------
