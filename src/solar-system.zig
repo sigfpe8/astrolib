@@ -201,12 +201,12 @@ pub fn equationOfTime(allocator: std.mem.Allocator, year: Year, interval: u32) !
     const buffer = try allocator.alloc(u8, BUFFER_SIZE);
     defer allocator.free(buffer);
     var writer = std.fs.File.stdout().writer(buffer);
-    var stdout: *std.Io.Writer = &writer.interface;
+    var stdout = &writer.interface;
 
     //     -20     0     20
     // "ddd |  ... | ... |"
     const lineSize = 4 + 1 + 20 + 1 + 20 + 1;
-    var lineBuf = [_]u8 { ' ' } ** lineSize;
+    var line = [_]u8 { ' ' } ** lineSize;
     const delta_days = @min(@max(interval,1),30);   // [1,30]
     var days: u32 = 1;
 
@@ -219,9 +219,11 @@ pub fn equationOfTime(allocator: std.mem.Allocator, year: Year, interval: u32) !
         var y: i32 = @as(i32,@intFromFloat(@round(mins))) + 20;
         y = @min(@max(y,0),40); // [0,40]
         const x: usize = @as(usize,@intCast(y));
-        const line = try std.fmt.bufPrint(&lineBuf,
-                "{d:3} |                    |                    |", .{days});
-        lineBuf[5+x] = '.';
+        _ = try std.fmt.bufPrint(
+                &line,
+                "{d:3} |                    |                    |",
+                .{days});
+        line[5+x] = '.';
         try stdout.print("{s}\n", .{line});
     }
 
