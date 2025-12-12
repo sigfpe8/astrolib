@@ -194,6 +194,50 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     };
 }
 
+/// Print to stdout a sideways graph of the equation of time for a given year
+pub fn equationOfTime(allocator: std.mem.Allocator, year: Year, interval: u32) !void {
+    // Get stdout
+    const BUFFER_SIZE = 2048;
+    const buffer = try allocator.alloc(u8, BUFFER_SIZE);
+    defer allocator.free(buffer);
+    var writer = std.fs.File.stdout().writer(buffer);
+    var stdout: *std.Io.Writer = &writer.interface;
+
+    //     -20     0     20
+    // "ddd |  ... | ... |"
+    const lineSize = 4 + 1 + 20 + 1 + 20 + 1;
+    var lineBuf = [_]u8 { ' ' } ** lineSize;
+    const delta_days = @min(@max(interval,1),30);   // [1,30]
+    var days: u32 = 1;
+
+    try stdout.print("\nDay | Equation of time (ΔT in min) for the year {d}\n\n", .{year});
+    try stdout.print("   -20                   0                   20\n", .{});
+
+    while (days < 366) : (days += delta_days) {
+        const date = AstroDate.fromYearAndDays(year, days);
+        const mins = deltaT(date);
+        var y: i32 = @as(i32,@intFromFloat(@round(mins))) + 20;
+        y = @min(@max(y,0),40); // [0,40]
+        const x: usize = @as(usize,@intCast(y));
+        const line = try std.fmt.bufPrint(&lineBuf,
+                "{d:3} |                    |                    |", .{days});
+        lineBuf[5+x] = '.';
+        try stdout.print("{s}\n", .{line});
+    }
+
+    try stdout.flush();
+}
+
+/// Return the equation of time (ΔT in minutes) for a given date
+pub fn deltaT(date: AstroDate) f64 {
+    const noon = date.noon();
+    const eq = sunRaDec(noon);
+    const gst = AstroDate.fromDateAndHours(date.year, date.month, date.day, eq.ra.toHours(), .{});
+    const ut = ast.gstToUT(gst);
+    const mins = (ut.hours - 12) * 60;
+    return mins;
+}
+
 // --------------------------------------------------------------------------
 //
 // Moon
