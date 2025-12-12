@@ -316,12 +316,13 @@ const Pair = struct { f64, f64 };
 fn sunPositions(allocator: Allocator, year: Year, hour: f64, interval: u32, loc: GeoCoord) ![]Pair {
     var list: std.ArrayList(Pair) = .empty;
     const delta_days = @min(@max(interval,1),30);   // [1,30]
+    const tz = TimeZone.fromLocation(loc, false);
     var days: u32 = 1;
 
     while (days < 366) : (days += delta_days) {
         var date = AstroDate.fromYearAndDays(year, days);
         date.hours = hour;
-        date.tz = ast.tzEST;
+        date.tz = tz;
         const hor = sunHorCoord(date, loc);
         try list.append(allocator, .{hor.alt.toDegrees(), hor.az.toDegrees()});
     }

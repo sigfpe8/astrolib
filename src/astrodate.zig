@@ -63,6 +63,14 @@ pub const TimeZone = packed struct(u8) {
         return TimeZone{ .dst = dst, .offset = offset };
     }
 
+    pub fn fromLocation(loc: GeoCoord, dst: bool) TimeZone {
+        // Timezone offset in hours = longitude / 15
+        const lon_deg = loc.lon.toDegrees();
+        const hours: i7 = @as(i7,@intFromFloat(@trunc(lon_deg / 15.0)));
+        // Assume only the main zones, no fractional timezones
+        return TimeZone.init(dst, hours, 0);
+    }
+
     pub fn getOffsetHours(self: TimeZone) f64 {
         var off: i7 = self.offset;
         if (self.dst) off += 4;

@@ -1,5 +1,10 @@
 const std = @import("std");
-const ast = @import("astrolib").ast;
+const lib= @import("astrolib");
+
+const ang = lib.ang;
+const Angle = ang.Angle;
+
+const ast = lib.ast;
 const AstroDate = ast.AstroDate;
 const TimeZone = ast.TimeZone;
 const UnixTime = ast.UnixTime;
@@ -7,6 +12,9 @@ const Year = ast.Year;
 const Month = ast.Month;
 const Day = ast.Day;
 const Allocator = std.mem.Allocator;
+
+const crd = lib.crd;
+const GeoCoord = crd.GeoCoord;
 
 const expect = std.testing.expect;
 const allocator = std.testing.allocator;
@@ -271,7 +279,7 @@ test "TimeZone" {
     offset_hours = tz.getOffsetHours();
     try expect(std.math.approxEqAbs(f64, offset_hours, -5.5, 0.0001));
 
-    tz = TimeZone.init(true, -5, -45); // UTC-5:30 with DST
+    tz = TimeZone.init(true, -5, -45); // UTC-5:45 with DST
     tz_str = try tz.toString(allocator);
     try expect(std.mem.eql(u8, tz_str, "-05:45 DST"));
     allocator.free(tz_str);
@@ -291,4 +299,9 @@ test "TimeZone" {
 
     offset_hours = tz.getOffsetHours();
     try expect(std.math.approxEqAbs(f64, offset_hours, 13.5, 0.0001));
+
+    const loc = GeoCoord.init(Angle.fromDegrees(38.0), Angle.fromDegrees(-78.0));
+    tz = TimeZone.fromLocation(loc, true);
+    try expect(tz.offset == -20); // -5 hours in 15-min units
+    try expect(tz.dst == true);
 }
