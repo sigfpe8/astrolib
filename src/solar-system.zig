@@ -799,3 +799,15 @@ pub fn bodyEcliptic(pb: *const Body, date: AstroDate, earth: *const HelioCoord) 
         .lon = lon,
     };
 }
+
+pub fn allPlanetPositions(date: AstroDate, allocator: Allocator) ![]RaDec {
+    const earth = HelioCoord.fromDate(&bodies[Earth], date);
+    var list: std.ArrayList(RaDec) = .empty;
+
+    for (bodies[Mercury..]) |*p| {
+        const radec = bodyRaDec(p, date, &earth);
+        try list.append(allocator, radec);
+    }
+
+    return list.toOwnedSlice(allocator);
+}
