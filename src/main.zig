@@ -127,14 +127,19 @@ fn allPlanetPositions(allocator: std.mem.Allocator, date: AstroDate) !void {
     for (bodies[Mercury..], 0..) |*p, i| {
         const law_radec = law[i];
         const sly_radec = sly[i];
-        const jpl_radec = jpl_ephem[i];
+        const jpl_ra = jpl_ephem[i].ra.toDegrees();
+        const jpl_dec = jpl_ephem[i].dec.toDegrees();
 
-        std.debug.print("{s:10}: RA={d:10.6}, Decl={d:10.6}   (JPL)\n",
-                    .{p.name, jpl_radec.ra.toDegrees(), jpl_radec.dec.toDegrees()});
-        std.debug.print("{s:10}: RA={d:10.6}, Decl={d:10.6}   (Lawrence)\n",
-                    .{"", law_radec.ra.toDegrees(), law_radec.dec.toDegrees()});
-        std.debug.print("{s:10}: RA={d:10.6}, Decl={d:10.6}   (Schlyter)\n\n",
-                    .{"", sly_radec.ra.toDegrees(), sly_radec.dec.toDegrees()});
+        std.debug.print("{s:10}: RA={d:10.6}°, Decl={d:10.6}°  (JPL)\n",
+                    .{p.name, jpl_ra, jpl_dec});
+        var ra = law_radec.ra.toDegrees();
+        var dec = law_radec.dec.toDegrees();
+        std.debug.print("{s:10}  RA={d:10.6}°, Decl={d:10.6}°  (Lawrence)  ΔJPL=({d:8.4}′, {d:8.4}′)\n",
+                    .{"", ra, dec, (ra - jpl_ra) * 60, (dec - jpl_dec) * 60});
+        ra = sly_radec.ra.toDegrees();
+        dec = sly_radec.dec.toDegrees();
+        std.debug.print("{s:10}  RA={d:10.6}°, Decl={d:10.6}°  (Schlyter)  ΔJPL=({d:8.4}′, {d:8.4}′)\n\n",
+                    .{"", ra, dec, (ra - jpl_ra) * 60, (dec - jpl_dec) * 60});
     }
 }
 
