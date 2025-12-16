@@ -28,6 +28,21 @@ pub const sec_to_hrs: f64 = 1.0 / 3600.0;   // 1 second = 1/3600 hours
 pub const sec_to_min: f64 = 1.0 / 60.0;     // 1 second = 1/60 minutes
 pub const sec_to_deg: f64 = 1.0 / 3600.0;   // 1 arcsecond = 1/3600 degrees
 
+/// Angle formats
+pub const Format = enum {
+    Degrees,    // Decimal degrees
+    Radians,    // Radians
+    Hours,      // Decimal hours
+    HMS,        // Hours, minutes, seconds
+    DMS,        // Degrees, arc minutes, arc seconds
+};
+
+/// Angle formatting options
+pub const Options = struct {
+    fmt: Format = .Degrees,
+    pre: usize = 4,    // Number of decimal places for decimal formats
+};
+
 pub const AngleError = error{
     InvalidAngleFormat,
     DegreeIsTooBig,
@@ -35,6 +50,8 @@ pub const AngleError = error{
     MinuteIsTooBig,
     SecondIsTooBig,
 };
+
+const allocPrint = std.fmt.allocPrint;
 
 pub const Angle = union(enum) {
     deg: f64,   // Decimal degrees
@@ -209,12 +226,15 @@ pub const Angle = union(enum) {
         };
     }
 
-    pub fn toString(self: Angle, allocator: Allocator) ![]const u8 {
-        const str = switch (self) {
-            .deg => try std.fmt.allocPrint(allocator, "{d:.4}°", .{self.deg}),
-            .rad => try std.fmt.allocPrint(allocator, "{d:.4} rad", .{self.rad}),
-            .hrs => try std.fmt.allocPrint(allocator, "{d:.4}ʰ", .{self.hrs}),
+    pub fn toString(self: Angle, options: Options,  allocator: Allocator) ![]const u8 {
+        const str = switch (options.fmt) {
+            .Degrees => try format(self.toDegrees(), options.pre, "°", allocator),
+            .Radians => try format(self.toRadians(), options.pre, " rad", allocator),
+            .Hours => try format(self.toHours(), options.pre, "ʰ", allocator),
+            .HMS => try self.toHMS().toString(allocator),
+            .DMS => try self.toDMS().toString(allocator),
         };
+
         return str;
     }
 
@@ -225,6 +245,21 @@ pub const Angle = union(enum) {
     pub fn toDMSString(self: Angle, allocator: Allocator) ![]const u8 {
         return try self.toDMS().toString(allocator);
     }
+
+    fn format(angle: f64, precision: usize, suffix: []const u8, allocator: Allocator) ![]const u8 {
+        // This is stupid but Zig doesn't support dynamic format strings yet...
+        switch (precision) {
+            0 => return try allocPrint(allocator, "{d:>.0}{s}", .{angle, suffix}),
+            1 => return try allocPrint(allocator, "{d:>.1}{s}", .{angle, suffix}),
+            2 => return try allocPrint(allocator, "{d:>.2}{s}", .{angle, suffix}),
+            3 => return try allocPrint(allocator, "{d:>.3}{s}", .{angle, suffix}),
+            4 => return try allocPrint(allocator, "{d:>.4}{s}", .{angle, suffix}),
+            5 => return try allocPrint(allocator, "{d:>.5}{s}", .{angle, suffix}),
+            6 => return try allocPrint(allocator, "{d:>.6}{s}", .{angle, suffix}),
+            else => return try allocPrint(allocator, "{d:0>.9}{s}", .{angle, suffix}),
+        }
+    }
+
 };
 
 // The following types (HMS and DMS) represent angles for human readability, not
@@ -250,7 +285,7 @@ pub const HMS = struct {
                 hi += 1;
             }
         }
-        return try std.fmt.allocPrint(allocator,
+        return try allocPrint(allocator,
                 "{s}{d:0>2}ʰ{d:0>2}ᵐ{d:0>2}ˢ",
                 .{if (self.sign == '-') "-" else "",
                         hi, mi, si});
@@ -345,7 +380,7 @@ pub const DMS = struct {
             }
         }
     
-        return try std.fmt.allocPrint(allocator,
+        return try allocPrint(allocator,
                 "{s}{d}°{d:0>2}′{d:0>2}″",
                 .{if (self.sign == '-') "-" else "",
                         di, mi, si});

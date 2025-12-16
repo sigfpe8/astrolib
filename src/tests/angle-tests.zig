@@ -12,6 +12,7 @@ const allocator = std.testing.allocator;
 
 test "toString" {
     const angle_deg = Angle.fromDegrees(45.0);
+    const angle_deg2 = Angle.fromDegrees(45.4567);
     const angle_rad = angle_deg.asRadians();
     const angle_hrs = angle_deg.asHours();
     const test_ang = Angle.fromHours(-14.598333);
@@ -22,11 +23,13 @@ test "toString" {
         .sec = 1.0,
     });
 
-    const deg_str = try angle_deg.toString(allocator);
+    const deg_str = try angle_deg.toString(.{}, allocator);
     defer allocator.free(deg_str);
-    const rad_str = try angle_rad.toString(allocator);
+    const deg2_str = try angle_deg2.toString(.{.pre=2, .fmt=.Degrees}, allocator);
+    defer allocator.free(deg2_str);
+    const rad_str = try angle_rad.toString(.{.fmt=.Radians}, allocator);
     defer allocator.free(rad_str);
-    const hrs_str = try angle_hrs.toString(allocator);
+    const hrs_str = try angle_hrs.toString(.{.fmt=.Hours}, allocator);
     defer allocator.free(hrs_str);
     const hms_str = try angle_deg.toHMSString(allocator);
     defer allocator.free(hms_str);
@@ -38,6 +41,7 @@ test "toString" {
     defer allocator.free(one_str);
 
     try expect(std.mem.eql(u8, deg_str, "45.0000°"));
+    try expect(std.mem.eql(u8, deg2_str, "45.46°"));
     try expect(std.mem.eql(u8, rad_str, "0.7854 rad"));
     try expect(std.mem.eql(u8, hrs_str, "3.0000ʰ"));
     try expect(std.mem.eql(u8, hms_str, "03ʰ00ᵐ00ˢ"));
