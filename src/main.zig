@@ -17,15 +17,20 @@ const Day = ast.Day;
 const GeoCoord = crd.GeoCoord;
 const RaDec = crd.RaDec;
 
-pub fn main() !void {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+const BUFFER_SIZE = 2048;
+var stdout_buffer: [BUFFER_SIZE]u8 = undefined;
+
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const allocator = init.gpa;
+   // Get stdout
+    var writer = std.Io.File.stdout().writer(io, &stdout_buffer);
+    const stdout = &writer.interface;
 
     // std.debug.print("Sizeof(AstroDate): {}\n", .{@sizeOf(AstroDate)});
     // std.debug.print("Sizeof(TimeZone): {}\n", .{@sizeOf(TimeZone)});
 
-    const ut = ast.now();
+    const ut = ast.now(io);
     const today = ast.utToLCT(ut, ast.tzEST);
     const today_str = try today.toString(allocator);
     defer allocator.free(today_str);
@@ -78,8 +83,8 @@ pub fn main() !void {
     const date_str = try date.toString(allocator);
     defer allocator.free(date_str);
     try allPlanetPositions(allocator, date);
-    try sol.equationOfTime(allocator, today.year, 10);
-    try sol.analemma(allocator, today.year, 9.0, 12, loc);
+    try sol.equationOfTime(stdout, today.year, 10);
+    try sol.analemma(stdout, allocator, today.year, 9.0, 12, loc);
 }
 
 

@@ -478,8 +478,8 @@ pub fn daysInMonth(year: Year, month: Month) u32 {
     return daysPerMonth[month - 1]; 
 }
 
-pub fn now() AstroDate {
-    const ts: UnixTime = std.time.timestamp();
+pub fn now(io: std.Io) AstroDate {
+    const ts: UnixTime = std.Io.Timestamp.now(io, .real).toSeconds();
     return AstroDate.fromUnixTime(ts);
 }
 

@@ -1,4 +1,5 @@
 const std = @import("std");
+const Writer = std.Io.Writer;
 
 const ang = @import("angle.zig");
 const Angle = ang.Angle;
@@ -194,15 +195,8 @@ pub fn sunRiseAndSet2(loc: GeoCoord, date: AstroDate) !RiseAndSetLCT {
     };
 }
 
-/// Print to stdout a sideways graph of the equation of time for a given year
-pub fn equationOfTime(allocator: Allocator, year: Year, interval: u32) !void {
-    // Get stdout
-    const BUFFER_SIZE = 2048;
-    const buffer = try allocator.alloc(u8, BUFFER_SIZE);
-    defer allocator.free(buffer);
-    var writer = std.fs.File.stdout().writer(buffer);
-    var stdout = &writer.interface;
-
+/// Print a sideways graph of the equation of time for a given year
+pub fn equationOfTime(writer: *Writer, year: Year, interval: u32) !void {
     //     -20     0     20
     // "ddd |  ... | ... |"
     const lineSize = 4 + 1 + 20 + 1 + 20 + 1;
@@ -210,8 +204,8 @@ pub fn equationOfTime(allocator: Allocator, year: Year, interval: u32) !void {
     const delta_days = @min(@max(interval,1),30);   // [1,30]
     var days: u32 = 1;
 
-    try stdout.print("\nDay | Equation of time (ΔT in min) for the year {d}\n\n", .{year});
-    try stdout.print("   -20                   0                   20\n", .{});
+    try writer.print("\nDay | Equation of time (ΔT in min) for the year {d}\n\n", .{year});
+    try writer.print("   -20                   0                   20\n", .{});
 
     while (days < 366) : (days += delta_days) {
         const date = AstroDate.fromYearAndDays(year, days);
@@ -224,10 +218,10 @@ pub fn equationOfTime(allocator: Allocator, year: Year, interval: u32) !void {
                 "{d:3} |                    |                    |",
                 .{days});
         line[5+x] = '.';
-        try stdout.print("{s}\n", .{line});
+        try writer.print("{s}\n", .{line});
     }
 
-    try stdout.flush();
+    try writer.flush();
 }
 
 /// Return the equation of time (ΔT in minutes) for a given date
@@ -240,15 +234,8 @@ pub fn deltaT(date: AstroDate) f64 {
     return mins;
 }
 
-/// Print to stdout a graph of the analemma for a given year, hour, and location
-pub fn analemma(allocator: Allocator, year: Year, hour: f64, interval: u32, loc: GeoCoord) !void {
-    // Get stdout
-    const BUFFER_SIZE = 2048;
-    const buffer = try allocator.alloc(u8, BUFFER_SIZE);
-    defer allocator.free(buffer);
-    var writer = std.fs.File.stdout().writer(buffer);
-    var stdout = &writer.interface;
-
+/// Print a graph of the analemma for a given year, hour, and location
+pub fn analemma(writer: *Writer, allocator: Allocator, year: Year, hour: f64, interval: u32, loc: GeoCoord) !void {
     const list = try sunPositions(allocator, year, hour, interval, loc);
     defer allocator.free(list);
 
@@ -305,10 +292,10 @@ pub fn analemma(allocator: Allocator, year: Year, hour: f64, interval: u32, loc:
     }
 
     // Print graph
-    try stdout.print("\nAnalemma for year {d} at {d:0<5.2} hours\n", .{year, hour});
-    try stdout.writeAll(graph);
-    try stdout.print("\n", .{});
-    try stdout.flush();
+    try writer.print("\nAnalemma for year {d} at {d:0<5.2} hours\n", .{year, hour});
+    try writer.writeAll(graph);
+    try writer.print("\n", .{});
+    try writer.flush();
 }
 
 const Pair = struct { f64, f64 };
